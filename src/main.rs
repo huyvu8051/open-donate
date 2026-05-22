@@ -2,6 +2,8 @@
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
+    let _ = dotenvy::dotenv();
+
     use axum::Router;
     use leptos::logging::log;
     use leptos::prelude::*;
@@ -15,6 +17,9 @@ async fn main() {
     let routes = generate_route_list(App);
 
     let app = Router::new()
+        .route("/api/login", axum::routing::get(open_donate::auth::handlers::login))
+        .route("/api/auth/callback", axum::routing::get(open_donate::auth::handlers::callback))
+        .route("/api/logout", axum::routing::get(open_donate::auth::handlers::logout))
         .leptos_routes(&leptos_options, routes, {
             let leptos_options = leptos_options.clone();
             move || shell(leptos_options.clone())

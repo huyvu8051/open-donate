@@ -11,9 +11,25 @@ services:
       - "./example-zitadel-config.yaml:/example-zitadel-config.yaml:ro"
       - "./example-zitadel-secrets.yaml:/example-zitadel-secrets.yaml:ro"
       - "./example-zitadel-init-steps.yaml:/example-zitadel-init-steps.yaml:ro"
+      - "./shared:/shared:rw"
     depends_on:
       db:
         condition: "service_healthy"
+
+  zitadel-setup:
+    image: hashicorp/terraform:latest
+    user: "root"
+    entrypoint: /bin/sh
+    command: -c "until nc -z zitadel 8080; do sleep 1; done && until [ -f /shared/setup-bot-pat.txt ]; do sleep 1; done && export TF_VAR_zitadel_token=\"\$(cat /shared/setup-bot-pat.txt)\" && terraform -chdir=/terraform init && terraform -chdir=/terraform apply -auto-approve"
+    volumes:
+      - "./terraform:/terraform:rw"
+      - "./shared:/shared:ro"
+      - ".:/app:rw"
+    networks:
+      - "zitadel"
+    depends_on:
+      zitadel:
+        condition: "service_started"
 
   db:
     image: postgres:17-alpine

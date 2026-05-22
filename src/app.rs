@@ -4,6 +4,7 @@ use leptos_router::{
     components::{Route, Router, Routes},
     StaticSegment,
 };
+use crate::auth::User;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -30,6 +31,10 @@ pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
 
+    // Load current user
+    let user_resource = Resource::new(|| (), |_| get_me());
+    provide_context(user_resource);
+
     view! {
         <Stylesheet id="leptos" href="/pkg/open-donate.css"/>
         <Title text="Glint | Empower Your Content"/>
@@ -45,6 +50,9 @@ pub fn App() -> impl IntoView {
 
 #[component]
 pub fn Header() -> impl IntoView {
+    let user_resource = use_context::<Resource<Result<Option<User>, ServerFnError>>>()
+        .expect("User resource must be provided");
+
     view! {
         <header class="fixed top-0 w-full z-50 bg-surface/60 backdrop-blur-xl border-b border-white/20 shadow-sm h-20 flex justify-between items-center px-margin-desktop">
             <div class="flex items-center gap-md">
@@ -54,6 +62,27 @@ pub fn Header() -> impl IntoView {
                     <a class="text-on-surface-variant font-medium text-label-md font-label-md hover:text-primary transition-colors" href="#">"Creators"</a>
                     <a class="text-on-surface-variant font-medium text-label-md font-label-md hover:text-primary transition-colors" href="#">"Leaderboard"</a>
                 </nav>
+            </div>
+            <div class="flex items-center gap-md">
+                <Suspense fallback=move || view! { <span class="text-on-surface-variant">"Loading..."</span> }>
+                    {move || {
+                        match user_resource.get() {
+                            Some(Ok(Some(user))) => view! {
+                                <div class="flex items-center gap-sm">
+                                    <span class="text-on-surface text-label-md font-semibold">"Hello, " {user.name}</span>
+                                    <a href="/api/logout" rel="external" class="px-sm py-xs bg-surface-container-highest border border-white/10 hover:bg-surface-container-highest/80 text-on-surface rounded-lg text-label-sm font-label-sm transition-all">
+                                        "Logout"
+                                    </a>
+                                </div>
+                            }.into_any(),
+                            _ => view! {
+                                <a href="/api/login" rel="external" class="px-md py-xs bg-primary text-on-primary rounded-lg text-label-md font-label-md font-semibold hover:bg-primary/95 transition-all shadow-sm">
+                                    "Login with Zitadel"
+                                </a>
+                            }.into_any()
+                        }
+                    }}
+                </Suspense>
             </div>
         </header>
     }
@@ -397,5 +426,51 @@ pub fn StreamerPage() -> impl IntoView {
             </div>
         </main>
         <Footer/>
+    }
+}
+
+#[server(GetMe, "/api")]
+pub async fn get_me() -> Result<Option<User>, ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        use axum::http::HeaderMap;
+        let headers = match leptos_axum::extract::<HeaderMap>().await {
+            Ok(h) => h,
+            Err(_) => return Ok(None),
+        };
+
+        let cookie_header = match headers.get(axum::http::header::COOKIE) {
+            Some(value) => match value.to_str() {
+                Ok(s) => s,
+                Err(_) => return Ok(None),
+            },
+            None => return Ok(None),
+        };
+
+        let mut token = None;
+        for cookie in cookie_header.split(';') {
+            let parts: Vec<&str> = cookie.trim().split('=').collect();
+            if parts.len() == 2 && parts[0].trim() == "auth_token" {
+                token = Some(parts[1].to_string());
+                break;
+            }
+        }
+
+        let token = match token {
+            Some(t) => t,
+            None => return Ok(None),
+        };
+
+        match crate::auth::validation::validate_jwt(&token).await {
+            Ok(user) => Ok(Some(user)),
+            Err(e) => {
+                eprintln!("JWT validation error: {:?}", e);
+                Ok(None)
+            }
+        }
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        unreachable!()
     }
 }

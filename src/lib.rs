@@ -1,4 +1,7 @@
+#![recursion_limit = "512"]
+
 pub mod app;
+pub mod auth;
 
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]
