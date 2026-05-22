@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+@source "../src";
+@source "../index.html";
+
+@theme {
+  --color-tertiary-fixed: #c4e7ff;
+  --color-surface-container-highest: #2d3449;
+  --color-inverse-on-surface: #283044;
+  --color-surface-dim: #0b1326;
+  --color-secondary-container: #00b55d;
+  --color-surface-tint: #ddb7ff;
+  --color-primary: #ddb7ff;
+  --color-secondary-fixed-dim: #4de082;
+  --color-tertiary: #7bd0ff;
+  --color-on-error-container: #ffdad6;
+  --color-inverse-primary: #842bd2;
+  --color-on-background: #dae2fd;
+  --color-surface-container-low: #131b2e;
+  --color-background: #0b1326;
+  --color-on-tertiary-fixed-variant: #004c69;
+  --color-on-primary-container: #400071;
+  --color-on-tertiary: #00354a;
+  --color-inverse-surface: #dae2fd;
+  --color-on-primary: #490080;
+  --color-surface-variant: #2d3449;
+  --color-surface-container-high: #222a3d;
+  --color-tertiary-fixed-dim: #7bd0ff;
+  --color-on-secondary-fixed: #00210c;
+  --color-on-primary-fixed-variant: #6900b3;
+  --color-surface-container-lowest: #060e20;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-outline: #988d9f;
+  --color-on-secondary-container: #003e1c;
+  --color-secondary: #4de082;
+  --color-surface-container: #171f33;
+  --color-on-tertiary-fixed: #001e2c;
+  --color-on-primary-fixed: #2c0051;
+  --color-error: #ffb4ab;
+  --color-surface-bright: #31394d;
+  --color-secondary-fixed: #6dfe9c;
+  --color-on-secondary-fixed-variant: #005227;
+  --color-primary-container: #b76dff;
+  --color-on-secondary: #003919;
+  --color-outline-variant: #4d4354;
+  --color-primary-fixed: #f0dbff;
+  --color-on-tertiary-container: #002d40;
+  --color-on-surface: #dae2fd;
+  --color-on-surface-variant: #cfc2d6;
+  --color-surface: #0b1326;
+  --color-primary-fixed-dim: #ddb7ff;
+  --color-tertiary-container: #009bd1;
+
+  --spacing-sm: 12px;
+  --spacing-base: 8px;
+  --spacing-margin-desktop: 64px;
+  --spacing-xs: 4px;
+  --spacing-xl: 80px;
+  --spacing-gutter: 24px;
+  --spacing-lg: 48px;
+  --spacing-md: 24px;
+  --spacing-margin-mobile: 16px;
+
+  --font-headline-lg: "Montserrat";
+  --font-headline-xl: "Montserrat";
+  --font-headline-md: "Montserrat";
+  --font-label-md: "Inter";
+  --font-body-lg: "Inter";
+  --font-headline-xl-mobile: "Montserrat";
+  --font-body-md: "Inter";
+  --font-label-sm: "Inter";
+}
+
+@utility text-headline-lg {
+  font-size: 32px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+@utility text-headline-xl {
+  font-size: 48px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 800;
+}
+@utility text-headline-md {
+  font-size: 24px;
+  line-height: 1.3;
+  font-weight: 700;
+}
+@utility text-label-md {
+  font-size: 14px;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+@utility text-body-lg {
+  font-size: 18px;
+  line-height: 1.6;
+  font-weight: 400;
+}
+@utility text-headline-xl-mobile {
+  font-size: 32px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  font-weight: 800;
+}
+@utility text-body-md {
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
+}
+@utility text-label-sm {
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+@utility glass-border {
+    border: 1px solid;
+    border-image-source: linear-gradient(to bottom, rgba(255,255,255,0.2), rgba(255,255,255,0.05));
+    border-image-slice: 1;
+}
+
+@utility neon-glow-primary {
+    box-shadow: 0 0 20px rgba(221, 183, 255, 0.15);
+}
+
+@utility neon-glow-secondary {
+    box-shadow: 0 0 20px rgba(77, 224, 130, 0.15);
+}
+
+@utility pulse-accent {
+    position: relative;
+    overflow: hidden;
+}
+
+.pulse-accent::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(77, 224, 130, 0.4), transparent);
+    animation: pulse-slide 3s infinite;
+}
+
+@keyframes pulse-slide {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+body {
+    font-family: sans-serif;
+}
+
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
