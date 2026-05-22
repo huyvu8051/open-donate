@@ -21,6 +21,8 @@ reqwest = { version = "0.12", features = ["json"], optional = true }
 jsonwebtoken = { version = "9", optional = true }
 urlencoding = { version = "2", optional = true }
 dotenvy = { version = "0.15", optional = true }
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "macros", "tls-native-tls", "migrate"], optional = true }
+chrono = { version = "0.4", optional = true }
 
 [features]
 hydrate = [
@@ -40,6 +42,8 @@ ssr = [
     "dep:jsonwebtoken",
     "dep:urlencoding",
     "dep:dotenvy",
+    "dep:sqlx",
+    "dep:chrono",
 ]
 
 # Defines a size-optimized profile for the WASM bundle in release mode

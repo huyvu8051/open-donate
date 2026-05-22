@@ -2,6 +2,10 @@
 
 pub mod app;
 pub mod auth;
+pub mod db;
+
+#[cfg(feature = "ssr")]
+pub mod sitemap;
 
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]

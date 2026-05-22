@@ -46,5 +46,6 @@ ZITADEL_ISSUER=http://localhost:8080
 ZITADEL_CLIENT_ID=${zitadel_application_oidc.open_donate_web.client_id}
 ZITADEL_CLIENT_SECRET=${zitadel_application_oidc.open_donate_web.client_secret}
 ZITADEL_REDIRECT_URI=http://localhost:3000/api/auth/callback
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/open_donate
 EOF
 }

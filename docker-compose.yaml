@@ -4,7 +4,7 @@ services:
     networks:
       - "zitadel"
     image: "ghcr.io/zitadel/zitadel:latest"
-    command: 'start-from-init --config /example-zitadel-config.yaml --config /example-zitadel-secrets.yaml --steps /example-zitadel-init-steps.yaml --masterkey "${ZITADEL_MASTERKEY}" --tlsMode disabled'
+    command: 'start-from-init --config /example-zitadel-config.yaml --config /example-zitadel-secrets.yaml --steps /example-zitadel-init-steps.yaml --masterkey "${ZITADEL_MASTERKEY:-Masterkey12345678901234567890123}" --tlsMode disabled'
     ports:
       - "8080:8080"
     volumes:
@@ -49,9 +49,22 @@ services:
     volumes:
       - 'data:/var/lib/postgresql/data:rw'
 
+  app-db:
+    image: postgres:17-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=open_donate
+    ports:
+      - "5432:5432"
+    volumes:
+      - 'app_db_data:/var/lib/postgresql/data:rw'
+
 networks:
   zitadel:
 
 volumes:
   data:
+  app_db_data:
 

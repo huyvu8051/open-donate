@@ -2,9 +2,11 @@ use leptos::prelude::*;
 use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
 use leptos_router::{
     components::{Route, Router, Routes},
-    StaticSegment,
+    hooks::use_params_map,
+    ParamSegment, StaticSegment,
 };
 use crate::auth::User;
+use crate::db::{DbStreamer, DbTransaction};
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -42,7 +44,7 @@ pub fn App() -> impl IntoView {
         <Router>
             <Routes fallback=|| "Page not found.".into_view()>
                 <Route path=StaticSegment("") view=LandingPage/>
-                <Route path=StaticSegment("streamer") view=StreamerPage/>
+                <Route path=(StaticSegment("streamer"), ParamSegment("username")) view=StreamerPage/>
             </Routes>
         </Router>
     }
@@ -58,7 +60,7 @@ pub fn Header() -> impl IntoView {
             <div class="flex items-center gap-md">
                 <a href="/" class="text-headline-md font-headline-md font-extrabold text-primary tracking-tighter">"Glint"</a>
                 <nav class="hidden md:flex items-center gap-md ml-lg">
-                    <a class="text-primary font-bold border-b-2 border-primary pb-1 text-label-md font-label-md hover:text-primary transition-colors" href="/streamer">"Explore"</a>
+                    <a class="text-primary font-bold border-b-2 border-primary pb-1 text-label-md font-label-md hover:text-primary transition-colors" href="/streamer/neonviper">"Explore"</a>
                     <a class="text-on-surface-variant font-medium text-label-md font-label-md hover:text-primary transition-colors" href="#">"Creators"</a>
                     <a class="text-on-surface-variant font-medium text-label-md font-label-md hover:text-primary transition-colors" href="#">"Leaderboard"</a>
                 </nav>
@@ -317,160 +319,458 @@ pub fn LandingPage() -> impl IntoView {
 
 #[component]
 pub fn StreamerPage() -> impl IntoView {
+    let params = use_params_map();
+    let username = move || {
+        params.read().get("username").unwrap_or_default()
+    };
+
     let amount = RwSignal::new("25".to_string());
-    
+    let donor_name = RwSignal::new("".to_string());
+    let message = RwSignal::new("".to_string());
+    let payment_method = RwSignal::new("Credit Card".to_string());
+    let transactions_trigger = RwSignal::new(0);
+
+    // Load profile info from database using URL param
+    let streamer_resource = Resource::new(move || username(), |uname| get_streamer(uname));
+
+    // Load recent transactions
+    let transactions_resource = Resource::new(
+        move || transactions_trigger.get(),
+        move |_| async move {
+            let streamer_id = match streamer_resource.get() {
+                Some(Ok(Some(s))) => s.id,
+                _ => 1,
+            };
+            get_recent_transactions(streamer_id).await
+        }
+    );
+
+    let donate_action = Action::new(move |_: &()| {
+        let amt_val = amount.get_untracked().parse::<f64>().unwrap_or(0.0);
+        let donor = donor_name.get_untracked();
+        let msg = message.get_untracked();
+        let pm = payment_method.get_untracked();
+        let streamer_id = match streamer_resource.get() {
+            Some(Ok(Some(s))) => s.id,
+            _ => 1,
+        };
+        async move {
+            create_donation(streamer_id, donor, amt_val, msg, pm).await
+        }
+    });
+
+    // React to donation result
+    Effect::new(move || {
+        if let Some(result) = donate_action.value().get() {
+            match result {
+                Ok(_) => {
+                    donor_name.set("".to_string());
+                    message.set("".to_string());
+                    transactions_trigger.update(|t| *t += 1);
+                }
+                Err(e) => {
+                    leptos::logging::error!("Donation submission failed: {:?}", e);
+                }
+            }
+        }
+    });
+
+    let handle_submit = move |_| {
+        let amt_val = amount.get().parse::<f64>().unwrap_or(0.0);
+        if amt_val <= 0.0 {
+            return;
+        }
+        donate_action.dispatch(());
+    };
+
     view! {
         <Header/>
-        <main class="pt-24 pb-lg px-margin-mobile md:px-margin-desktop max-w-4xl mx-auto flex-1 w-full">
+        <main class="pt-24 pb-lg px-margin-mobile md:px-margin-desktop max-w-4xl mx-auto flex-1 w-full flex flex-col gap-lg animate-fade-in">
             // Streamer Profile Header
-            <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md mb-lg relative overflow-hidden flex flex-col md:flex-row gap-md items-center md:items-end">
-                <div class="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
-                <div class="relative w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden border-2 border-secondary shadow-[0_0_20px_rgba(77,224,130,0.3)]">
-                    <img alt="Streamer Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLjEWKtvutw2bXJ6cXjX35VKSvndfcZFjksgkktDcFmWKH5w3JqiRsBENEnrWm0JHREPHPBQRwTGM2krlAjj-4IyFB_LtaFrMOvwlpVF-S4Wn-Qpc0Of9KKyyIayT9k7z69aL3NoVoXBzHPX-ZTbmlTm1ZFFq2kN49w8irdbwsj0edERW-AXu_cuLLa2XaiDOHQM4f5mbEU5MqTwigjzU5okvpS1kdr5WuV-yhcWwXphzBaqQ11rEVUtD0TpCxcHePnYEOrnYJOdc"/>
-                </div>
-                <div class="flex-1 flex flex-col gap-xs text-center md:text-left relative z-10">
-                    <div class="flex items-center justify-center md:justify-start gap-sm">
-                        <h1 class="text-headline-lg font-headline-lg text-on-surface">"NeonViper"</h1>
-                        <span class="bg-secondary/10 text-secondary border border-secondary/20 px-sm py-xs rounded-full text-label-sm font-label-sm flex items-center gap-xs">
-                            <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
-                            "LIVE"
-                        </span>
+            <Suspense fallback=move || view! {
+                <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md mb-lg relative overflow-hidden flex flex-col md:flex-row gap-md items-center md:items-end min-h-[180px] animate-pulse">
+                    <div class="w-32 h-32 md:w-40 md:h-40 rounded-2xl bg-white/5 border border-white/10"></div>
+                    <div class="flex-1 flex flex-col gap-xs text-center md:text-left">
+                        <div class="h-8 w-48 bg-white/5 rounded mx-auto md:mx-0"></div>
+                        <div class="h-4 w-full bg-white/5 rounded mt-sm"></div>
                     </div>
-                    <p class="text-on-surface-variant text-body-md font-body-md max-w-[600px] mx-auto md:mx-0">"Pushing the boundaries of competitive play. Today we're smashing the charity goals for the Digital Oceans Fund!"</p>
-                </div>
-            </section>
-            
-            // Donation Form
-            <div class="flex flex-col gap-gutter">
-                <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md md:p-xl flex flex-col gap-md">
-                    <div class="flex items-center gap-sm">
-                        <span class="material-symbols-outlined text-secondary" data-icon="volunteer_activism">"volunteer_activism"</span>
-                        <h2 class="text-headline-md font-headline-md text-on-surface">"Send a Glint"</h2>
-                    </div>
-                    
-                    // Amount Selection
-                    <div class="flex flex-col gap-base">
-                        <label class="text-label-md font-label-md text-on-surface-variant">"Amount"</label>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-base">
-                            {
-                                let amounts = vec!["5", "10", "25", "50"];
-                                amounts.into_iter().map(|amt| {
-                                    let amt_clone = amt.to_string();
-                                    view! {
-                                        <button 
-                                            class=move || {
-                                                if amount.get() == amt_clone {
-                                                    "bg-white/5 backdrop-blur-md border-2 p-md rounded-xl text-headline-md font-headline-md text-on-surface transition-all border-secondary shadow-[inset_0_0_15px_rgba(77,224,130,0.1)]".to_string()
-                                                } else {
-                                                    "bg-white/5 backdrop-blur-md border border-white/10 p-md rounded-xl text-headline-md font-headline-md text-on-surface hover:border-secondary transition-all".to_string()
-                                                }
-                                            }
-                                            on:click=move |_| amount.set(amt.to_string())
-                                        >
-                                            "$" {amt}
-                                        </button>
-                                    }
-                                }).collect_view()
-                            }
-                        </div>
-                        <div class="relative mt-base">
-                            <span class="absolute left-md top-1/2 -translate-y-1/2 text-on-surface-variant">"$"</span>
-                            <input 
-                                class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl px-xl py-md text-body-lg font-body-lg focus:outline-none focus:border-primary transition-all" 
-                                placeholder="Custom Amount" 
-                                type="number"
-                                prop:value=move || amount.get()
-                                on:input=move |ev| amount.set(event_target_value(&ev))
-                            />
-                        </div>
-                    </div>
-                    
-                    // Your Message
-                    <div class="flex flex-col gap-base">
-                        <label class="text-label-md font-label-md text-on-surface-variant">"Your Message"</label>
-                        <textarea class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl px-md py-md text-body-md font-body-md focus:outline-none focus:border-primary transition-all min-h-[120px] resize-none" placeholder="Enter a message to be read on stream..."></textarea>
-                    </div>
-                    
-                    // Payment Method
-                    <div class="flex flex-col gap-base">
-                        <label class="text-label-md font-label-md text-on-surface-variant">"Payment Method"</label>
-                        <div class="grid grid-cols-3 gap-base">
-                            <label class="cursor-pointer">
-                                <input checked=true class="hidden peer" name="payment" type="radio"/>
-                                <div class="flex flex-col items-center justify-center bg-white/5 backdrop-blur-md p-sm rounded-xl text-center border border-white/10 peer-checked:border-primary peer-checked:bg-primary/5 transition-all">
-                                    <span class="material-symbols-outlined text-primary mb-xs">"payments"</span>
-                                    <span class="text-label-sm font-label-sm">"Credit Card"</span>
-                                </div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input class="hidden peer" name="payment" type="radio"/>
-                                <div class="flex flex-col items-center justify-center bg-white/5 backdrop-blur-md p-sm rounded-xl text-center border border-white/10 peer-checked:border-primary peer-checked:bg-primary/5 transition-all">
-                                    <span class="material-symbols-outlined text-primary mb-xs">"account_balance_wallet"</span>
-                                    <span class="text-label-sm font-label-sm">"PayPal"</span>
-                                </div>
-                            </label>
-                            <label class="cursor-pointer">
-                                <input class="hidden peer" name="payment" type="radio"/>
-                                <div class="flex flex-col items-center justify-center bg-white/5 backdrop-blur-md p-sm rounded-xl text-center border border-white/10 peer-checked:border-primary peer-checked:bg-primary/5 transition-all">
-                                    <span class="material-symbols-outlined text-primary mb-xs">"currency_bitcoin"</span>
-                                    <span class="text-label-sm font-label-sm">"Crypto"</span>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    // Donate Now Button
-                    <button class="bg-secondary-container text-on-secondary-container py-md rounded-xl text-headline-md font-headline-md hover:shadow-[0_0_30px_rgba(0,181,93,0.3)] transition-all mt-base active:scale-[0.98]">"Donate Now"</button>
-                    <p class="text-center text-label-sm font-label-sm text-on-surface-variant">"Glint matches 5% of all stream donations today."</p>
                 </section>
-            </div>
-        </main>
-        <Footer/>
-    }
-}
+            }>
+                {move || {
+                    streamer_resource.get().map(|res| {
+                        match res {
+                            Ok(Some(streamer)) => {
+                                let avatar = streamer.avatar_url.clone();
+                                let name = streamer.display_name.clone();
+                                let bio = streamer.bio.clone();
+                                let is_live = streamer.is_live;
+                                view! {
+                                    <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md mb-lg relative overflow-hidden flex flex-col md:flex-row gap-md items-center md:items-end">
+                                        <div class="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+                                        <div class="relative w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden border-2 border-secondary shadow-[0_0_20px_rgba(77,224,130,0.3)]">
+                                            <img alt="Streamer Avatar" class="w-full h-full object-cover" src=avatar/>
+                                        </div>
+                                        <div class="flex-1 flex flex-col gap-xs text-center md:text-left relative z-10">
+                                            <div class="flex items-center justify-center md:justify-start gap-sm">
+                                                <h1 class="text-headline-lg font-headline-lg text-on-surface">{name}</h1>
+                                                {if is_live {
+                                                    view! {
+                                                        <span class="bg-secondary/10 text-secondary border border-secondary/20 px-sm py-xs rounded-full text-label-sm font-label-sm flex items-center gap-xs">
+                                                            <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+                                                            "LIVE"
+                                                        </span>
+                                                    }.into_any()
+                                                } else {
+                                                    view! {
+                                                        <span class="bg-white/10 text-on-surface-variant border border-white/15 px-sm py-xs rounded-full text-label-sm font-label-sm flex items-center gap-xs">
+                                                            "OFFLINE"
+                                                        </span>
+                                                    }.into_any()
+                                                }}
+                                            </div>
+                                            <p class="text-on-surface-variant text-body-md font-body-md max-w-[600px] mx-auto md:mx-0">{bio}</p>
+                                        </div>
+                                    </section>
+                                  }.into_any()
+                              }
+                              _ => view! {
+                                  <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md mb-lg text-center text-on-surface-variant">
+                                      "Streamer profile not found in database."
+                                  </section>
+                              }.into_any()
+                          }
+                      })
+                  }}
+              </Suspense>
+
+              // Donation Form
+              <div class="flex flex-col gap-gutter">
+                  <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md md:p-xl flex flex-col gap-md">
+                      <div class="flex items-center gap-sm">
+                          <span class="material-symbols-outlined text-secondary" data-icon="volunteer_activism">"volunteer_activism"</span>
+                          <h2 class="text-headline-md font-headline-md text-on-surface">"Send a Glint"</h2>
+                      </div>
+
+                      // Your Name Input
+                      <div class="flex flex-col gap-base">
+                          <label class="text-label-md font-label-md text-on-surface-variant">"Your Name"</label>
+                          <input 
+                              class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl px-md py-md text-body-md font-body-md focus:outline-none focus:border-primary transition-all text-on-surface" 
+                              placeholder="Enter your name (e.g. Anonymous)" 
+                              type="text"
+                              prop:value=move || donor_name.get()
+                              on:input=move |ev| donor_name.set(event_target_value(&ev))
+                          />
+                      </div>
+
+                      // Amount Selection
+                      <div class="flex flex-col gap-base">
+                          <label class="text-label-md font-label-md text-on-surface-variant">"Amount"</label>
+                          <div class="grid grid-cols-2 md:grid-cols-4 gap-base">
+                              {
+                                  let amounts = vec!["5", "10", "25", "50"];
+                                  amounts.into_iter().map(|amt| {
+                                      let amt_clone = amt.to_string();
+                                      view! {
+                                          <button 
+                                              class=move || {
+                                                  if amount.get() == amt_clone {
+                                                      "bg-white/5 backdrop-blur-md border-2 p-md rounded-xl text-headline-md font-headline-md text-on-surface transition-all border-secondary shadow-[inset_0_0_15px_rgba(77,224,130,0.1)]".to_string()
+                                                  } else {
+                                                      "bg-white/5 backdrop-blur-md border border-white/10 p-md rounded-xl text-headline-md font-headline-md text-on-surface hover:border-secondary transition-all".to_string()
+                                                  }
+                                              }
+                                              on:click=move |_| amount.set(amt.to_string())
+                                          >
+                                              "$" {amt}
+                                          </button>
+                                      }
+                                  }).collect_view()
+                              }
+                          </div>
+                          <div class="relative mt-base">
+                              <span class="absolute left-md top-1/2 -translate-y-1/2 text-on-surface-variant">"$"</span>
+                              <input 
+                                  class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl px-xl py-md text-body-lg font-body-lg focus:outline-none focus:border-primary transition-all text-on-surface" 
+                                  placeholder="Custom Amount" 
+                                  type="number"
+                                  prop:value=move || amount.get()
+                                  on:input=move |ev| amount.set(event_target_value(&ev))
+                              />
+                          </div>
+                      </div>
+
+                      // Your Message
+                      <div class="flex flex-col gap-base">
+                          <label class="text-label-md font-label-md text-on-surface-variant">"Your Message"</label>
+                          <textarea 
+                              class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl px-md py-md text-body-md font-body-md focus:outline-none focus:border-primary transition-all min-h-[120px] resize-none text-on-surface" 
+                              placeholder="Enter a message to be read on stream..."
+                              prop:value=move || message.get()
+                              on:input=move |ev| message.set(event_target_value(&ev))
+                          ></textarea>
+                      </div>
+
+                      // Payment Method
+                      <div class="flex flex-col gap-base">
+                          <label class="text-label-md font-label-md text-on-surface-variant">"Payment Method"</label>
+                          <div class="grid grid-cols-3 gap-base">
+                              <label class="cursor-pointer" on:click=move |_| payment_method.set("Credit Card".to_string())>
+                                  <input checked=move || payment_method.get() == "Credit Card" class="hidden peer" name="payment" type="radio"/>
+                                  <div class="flex flex-col items-center justify-center bg-white/5 backdrop-blur-md p-sm rounded-xl text-center border border-white/10 peer-checked:border-primary peer-checked:bg-primary/5 transition-all">
+                                      <span class="material-symbols-outlined text-primary mb-xs">"payments"</span>
+                                      <span class="text-label-sm font-label-sm">"Credit Card"</span>
+                                  </div>
+                              </label>
+                              <label class="cursor-pointer" on:click=move |_| payment_method.set("PayPal".to_string())>
+                                  <input checked=move || payment_method.get() == "PayPal" class="hidden peer" name="payment" type="radio"/>
+                                  <div class="flex flex-col items-center justify-center bg-white/5 backdrop-blur-md p-sm rounded-xl text-center border border-white/10 peer-checked:border-primary peer-checked:bg-primary/5 transition-all">
+                                      <span class="material-symbols-outlined text-primary mb-xs">"account_balance_wallet"</span>
+                                      <span class="text-label-sm font-label-sm">"PayPal"</span>
+                                  </div>
+                              </label>
+                              <label class="cursor-pointer" on:click=move |_| payment_method.set("Crypto".to_string())>
+                                  <input checked=move || payment_method.get() == "Crypto" class="hidden peer" name="payment" type="radio"/>
+                                  <div class="flex flex-col items-center justify-center bg-white/5 backdrop-blur-md p-sm rounded-xl text-center border border-white/10 peer-checked:border-primary peer-checked:bg-primary/5 transition-all">
+                                      <span class="material-symbols-outlined text-primary mb-xs">"currency_bitcoin"</span>
+                                      <span class="text-label-sm font-label-sm">"Crypto"</span>
+                                  </div>
+                              </label>
+                          </div>
+                      </div>
+
+                      // Donate Now Button
+                      <button 
+                          class="bg-secondary-container text-on-secondary-container py-md rounded-xl text-headline-md font-headline-md hover:shadow-[0_0_30px_rgba(0,181,93,0.3)] transition-all mt-base active:scale-[0.98]"
+                          on:click=handle_submit
+                      >
+                          "Donate Now"
+                      </button>
+                      <p class="text-center text-label-sm font-label-sm text-on-surface-variant">"Glint matches 5% of all stream donations today."</p>
+                  </section>
+              </div>
+
+              // Recent Tributes Section
+              <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md md:p-xl flex flex-col gap-md">
+                  <div class="flex items-center gap-sm">
+                      <span class="material-symbols-outlined text-primary" data-icon="history">"history"</span>
+                      <h2 class="text-headline-md font-headline-md text-on-surface">"Recent Tributes"</h2>
+                  </div>
+                  
+                  <Suspense fallback=move || view! { <div class="text-on-surface-variant">"Loading recent tributes..."</div> }>
+                      {move || {
+                          transactions_resource.get().map(|res| {
+                              match res {
+                                  Ok(txs) => {
+                                      if txs.is_empty() {
+                                          view! {
+                                              <p class="text-on-surface-variant text-center py-md">"No tributes yet. Be the first to send a Glint!"</p>
+                                          }.into_any()
+                                      } else {
+                                          view! {
+                                              <div class="flex flex-col gap-base">
+                                                  {txs.into_iter().map(|tx| {
+                                                      let msg = tx.message.clone();
+                                                      view! {
+                                                          <div class="bg-white/5 border border-white/10 rounded-xl p-base flex flex-col gap-xs transition-all hover:bg-white/10">
+                                                              <div class="flex justify-between items-center">
+                                                                  <span class="text-on-surface font-semibold text-body-md">{tx.donor_name.clone()}</span>
+                                                                  <span class="text-secondary font-bold text-headline-sm">"$" {format!("{:.2}", tx.amount)}</span>
+                                                                </div>
+                                                                {if let Some(msg_str) = msg {
+                                                                    view! {
+                                                                        <p class="text-on-surface-variant text-body-sm italic bg-surface-container-low/40 border border-white/5 rounded-lg p-sm mt-xs">
+                                                                            "\"" {msg_str} "\""
+                                                                        </p>
+                                                                    }.into_any()
+                                                                } else {
+                                                                    view! {}.into_any()
+                                                                }}
+                                                                <div class="flex justify-between items-center text-label-sm text-on-surface-variant/80 mt-xs">
+                                                                    <span>"via " {tx.payment_method.clone()}</span>
+                                                                    <span>{tx.created_at.clone()}</span>
+                                                                </div>
+                                                            </div>
+                                                      }
+                                                  }).collect_view()}
+                                              </div>
+                                          }.into_any()
+                                      }
+                                  }
+                                  Err(_) => view! { <div class="text-on-surface-variant text-center">"Failed to load recent tributes."</div> }.into_any()
+                              }
+                          })
+                      }}
+                  </Suspense>
+              </section>
+          </main>
+          <Footer/>
+      }
+  }
 
 #[server(GetMe, "/api")]
 pub async fn get_me() -> Result<Option<User>, ServerFnError> {
-    #[cfg(feature = "ssr")]
-    {
-        use axum::http::HeaderMap;
-        let headers = match leptos_axum::extract::<HeaderMap>().await {
-            Ok(h) => h,
+    use axum::http::HeaderMap;
+    let headers = match leptos_axum::extract::<HeaderMap>().await {
+        Ok(h) => h,
+        Err(_) => return Ok(None),
+    };
+
+    let cookie_header = match headers.get(axum::http::header::COOKIE) {
+        Some(value) => match value.to_str() {
+            Ok(s) => s,
             Err(_) => return Ok(None),
-        };
+        },
+        None => return Ok(None),
+    };
 
-        let cookie_header = match headers.get(axum::http::header::COOKIE) {
-            Some(value) => match value.to_str() {
-                Ok(s) => s,
-                Err(_) => return Ok(None),
-            },
-            None => return Ok(None),
-        };
-
-        let mut token = None;
-        for cookie in cookie_header.split(';') {
-            let parts: Vec<&str> = cookie.trim().split('=').collect();
-            if parts.len() == 2 && parts[0].trim() == "auth_token" {
-                token = Some(parts[1].to_string());
-                break;
-            }
-        }
-
-        let token = match token {
-            Some(t) => t,
-            None => return Ok(None),
-        };
-
-        match crate::auth::validation::validate_jwt(&token).await {
-            Ok(user) => Ok(Some(user)),
-            Err(e) => {
-                eprintln!("JWT validation error: {:?}", e);
-                Ok(None)
-            }
+    let mut token = None;
+    for cookie in cookie_header.split(';') {
+        let parts: Vec<&str> = cookie.trim().split('=').collect();
+        if parts.len() == 2 && parts[0].trim() == "auth_token" {
+            token = Some(parts[1].to_string());
+            break;
         }
     }
-    #[cfg(not(feature = "ssr"))]
-    {
-        unreachable!()
+
+    let token = match token {
+        Some(t) => t,
+        None => return Ok(None),
+    };
+
+    match crate::auth::validation::validate_jwt(&token).await {
+        Ok(user) => Ok(Some(user)),
+        Err(e) => {
+            eprintln!("JWT validation error: {:?}", e);
+            Ok(None)
+        }
     }
+}
+
+#[server(GetStreamer, "/api")]
+pub async fn get_streamer(username: String) -> Result<Option<DbStreamer>, ServerFnError> {
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    let row = sqlx::query(
+        "SELECT id, username, display_name, avatar_url, bio, is_live FROM streamers WHERE username = $1"
+    )
+    .bind(username)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+
+    match row {
+        Some(r) => {
+            use sqlx::Row;
+            Ok(Some(DbStreamer {
+                id: r.get("id"),
+                username: r.get("username"),
+                display_name: r.get("display_name"),
+                avatar_url: r.get("avatar_url"),
+                bio: r.get("bio"),
+                is_live: r.get("is_live"),
+            }))
+        }
+        None => Ok(None),
+    }
+}
+
+#[server(GetAllStreamers, "/api")]
+pub async fn get_all_streamers() -> Result<Vec<DbStreamer>, ServerFnError> {
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    let rows = sqlx::query(
+        "SELECT id, username, display_name, avatar_url, bio, is_live FROM streamers ORDER BY id"
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+
+    use sqlx::Row;
+    let streamers = rows.into_iter().map(|r| {
+        DbStreamer {
+            id: r.get("id"),
+            username: r.get("username"),
+            display_name: r.get("display_name"),
+            avatar_url: r.get("avatar_url"),
+            bio: r.get("bio"),
+            is_live: r.get("is_live"),
+        }
+    }).collect();
+
+    Ok(streamers)
+}
+
+#[server(CreateDonation, "/api")]
+pub async fn create_donation(
+    streamer_id: i32,
+    donor_name: String,
+    amount: f64,
+    message: String,
+    payment_method: String,
+) -> Result<(), ServerFnError> {
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    let donor = if donor_name.trim().is_empty() {
+        "Anonymous".to_string()
+    } else {
+        donor_name
+    };
+
+    let message_opt = if message.trim().is_empty() {
+        None
+    } else {
+        Some(message)
+    };
+
+    sqlx::query(
+        "INSERT INTO transactions (streamer_id, donor_name, amount, message, payment_method)
+         VALUES ($1, $2, $3, $4, $5)"
+    )
+    .bind(streamer_id)
+    .bind(donor)
+    .bind(amount)
+    .bind(message_opt)
+    .bind(payment_method)
+    .execute(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database insert failed: {}", e)))?;
+
+    Ok(())
+}
+
+#[server(GetRecentTransactions, "/api")]
+pub async fn get_recent_transactions(streamer_id: i32) -> Result<Vec<DbTransaction>, ServerFnError> {
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    let rows = sqlx::query(
+        "SELECT id, streamer_id, donor_name, amount, message, payment_method, TO_CHAR(created_at, 'YYYY-MM-DD HH:MI AM') as formatted_date 
+         FROM transactions 
+         WHERE streamer_id = $1 
+         ORDER BY id DESC 
+         LIMIT 10"
+    )
+    .bind(streamer_id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+
+    use sqlx::Row;
+    let txs = rows.into_iter().map(|r| {
+        DbTransaction {
+            id: r.get("id"),
+            streamer_id: r.get("streamer_id"),
+            donor_name: r.get("donor_name"),
+            amount: r.get("amount"),
+            message: r.get("message"),
+            payment_method: r.get("payment_method"),
+            created_at: r.get("formatted_date"),
+        }
+    }).collect();
+
+    Ok(txs)
 }
