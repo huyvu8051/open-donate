@@ -3,6 +3,7 @@
 pub mod app;
 pub mod auth;
 pub mod db;
+pub mod dashboard;
 
 #[cfg(feature = "ssr")]
 pub mod sitemap;

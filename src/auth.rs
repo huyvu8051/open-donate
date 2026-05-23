@@ -27,13 +27,13 @@ pub mod handlers {
     }
 
     pub async fn login() -> impl IntoResponse {
-        let client_id = std::env::var("ZITADEL_CLIENT_ID").unwrap_or_default();
-        let redirect_uri = std::env::var("ZITADEL_REDIRECT_URI").unwrap_or_default();
-        let issuer = std::env::var("ZITADEL_ISSUER").unwrap_or_default();
+        let client_id = std::env::var("OIDC_CLIENT_ID").unwrap_or_default();
+        let redirect_uri = std::env::var("OIDC_REDIRECT_URI").unwrap_or_default();
+        let issuer = std::env::var("OIDC_ISSUER").unwrap_or_default();
 
         let encoded_redirect = urlencoding::encode(&redirect_uri);
         let url = format!(
-            "{}/oauth/v2/authorize?client_id={}&redirect_uri={}&response_type=code&scope=openid+profile+email&state=state123&nonce=nonce123",
+            "{}/protocol/openid-connect/auth?client_id={}&redirect_uri={}&response_type=code&scope=openid+profile+email&state=state123&nonce=nonce123",
             issuer, client_id, encoded_redirect
         );
 
@@ -41,12 +41,12 @@ pub mod handlers {
     }
 
     pub async fn callback(Query(params): Query<CallbackParams>) -> impl IntoResponse {
-        let client_id = std::env::var("ZITADEL_CLIENT_ID").unwrap_or_default();
-        let client_secret = std::env::var("ZITADEL_CLIENT_SECRET").unwrap_or_default();
-        let redirect_uri = std::env::var("ZITADEL_REDIRECT_URI").unwrap_or_default();
-        let issuer = std::env::var("ZITADEL_ISSUER").unwrap_or_default();
+        let client_id = std::env::var("OIDC_CLIENT_ID").unwrap_or_default();
+        let client_secret = std::env::var("OIDC_CLIENT_SECRET").unwrap_or_default();
+        let redirect_uri = std::env::var("OIDC_REDIRECT_URI").unwrap_or_default();
+        let issuer = std::env::var("OIDC_ISSUER").unwrap_or_default();
 
-        let token_url = format!("{}/oauth/v2/token", issuer);
+        let token_url = format!("{}/protocol/openid-connect/token", issuer);
         let client = reqwest::Client::new();
 
         let form_data = [
@@ -137,7 +137,7 @@ pub mod validation {
             return Ok(jwks);
         }
 
-        let url = format!("{}/oauth/v2/keys", issuer);
+        let url = format!("{}/protocol/openid-connect/certs", issuer);
         let resp = reqwest::get(&url)
             .await
             .map_err(|e| format!("Failed to fetch JWKS: {}", e))?;
@@ -155,8 +155,8 @@ pub mod validation {
     }
 
     pub async fn validate_jwt(token: &str) -> Result<User, String> {
-        let client_id = std::env::var("ZITADEL_CLIENT_ID").unwrap_or_default();
-        let issuer = std::env::var("ZITADEL_ISSUER").unwrap_or_default();
+        let client_id = std::env::var("OIDC_CLIENT_ID").unwrap_or_default();
+        let issuer = std::env::var("OIDC_ISSUER").unwrap_or_default();
 
         // 1. Decode header to get `kid`
         let header = decode_header(token).map_err(|e| format!("Invalid JWT header: {}", e))?;

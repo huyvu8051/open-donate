@@ -1,51 +1,99 @@
 terraform {
   required_providers {
-    zitadel = {
-      source  = "zitadel/zitadel"
-      version = "~> 2.0"
+    keycloak = {
+      source  = "mrparkers/keycloak"
+      version = ">= 4.0.0"
+    }
+    local = {
+      source = "hashicorp/local"
+      version = ">= 2.0.0"
     }
   }
 }
 
-variable "zitadel_token" {
-  type      = string
-  sensitive = true
+provider "keycloak" {
+  client_id = "admin-cli"
+  url       = "http://localhost:8080"
+  username  = "admin"
+  password  = "admin"
 }
 
-provider "zitadel" {
-  domain       = "zitadel"
-  port         = "8080"
-  insecure     = true
-  access_token = var.zitadel_token
+resource "keycloak_realm" "open_donate" {
+  realm                       = "open-donate"
+  enabled                     = true
+  display_name                = "Open Donate"
+  ssl_required                = "none"
+  
+  # Registration settings
+  registration_allowed        = true
+  registration_email_as_username = true
+  verify_email                = false
+  remember_me                 = true
+  reset_password_allowed      = true
+  
+  # Optimization for dev/test
+  sso_session_idle_timeout    = "24h"
+  sso_session_max_lifespan    = "168h"
 
-  transport_headers = {
-    "Host"                  = "localhost:8080"
-    "x-zitadel-public-host" = "localhost:8080"
+  # Enable declarative user profile
+  attributes = {
+    userProfileEnabled = "true"
   }
 }
 
-resource "zitadel_project" "open_donate" {
-  name = "open-donate"
+resource "keycloak_realm_user_profile" "open_donate_profile" {
+  realm_id = keycloak_realm.open_donate.id
+
+  attribute {
+    name = "username"
+    display_name = "$${ro.username}"
+    permissions {
+      view = ["admin", "user"]
+      edit = ["admin", "user"]
+    }
+  }
+  
+  attribute {
+    name = "email"
+    display_name = "$${email}"
+    required_for_roles = ["user"]
+    permissions {
+      view = ["admin", "user"]
+      edit = ["admin", "user"]
+    }
+  }
+
+  # First name and Last name are NOT required for user role, 
+  # and we remove them from the registration screen by removing permissions or making them not required
 }
 
-resource "zitadel_application_oidc" "open_donate_web" {
-  project_id                  = zitadel_project.open_donate.id
-  name                        = "open-donate-web"
-  redirect_uris               = ["http://localhost:3000/api/auth/callback"]
-  response_types              = ["OIDC_RESPONSE_TYPE_CODE"]
-  grant_types                 = ["OIDC_GRANT_TYPE_AUTHORIZATION_CODE"]
-  app_type                    = "OIDC_APP_TYPE_WEB"
-  auth_method_type            = "OIDC_AUTH_METHOD_TYPE_POST"
-  post_logout_redirect_uris   = ["http://localhost:3000"]
+resource "keycloak_openid_client" "open_donate_web" {
+  realm_id                     = keycloak_realm.open_donate.id
+  client_id                    = "open-donate-web"
+  name                         = "Open Donate Web App"
+  enabled                      = true
+  
+  access_type                  = "CONFIDENTIAL"
+  standard_flow_enabled        = true
+  implicit_flow_enabled        = false
+  direct_access_grants_enabled = false
+  
+  valid_redirect_uris = [
+    "http://localhost:3000/api/auth/callback"
+  ]
+  
+  web_origins = [
+    "+"
+  ]
 }
 
 resource "local_file" "env_file" {
-  filename = "/app/.env"
+  filename = "../.env"
   content  = <<EOF
-ZITADEL_ISSUER=http://localhost:8080
-ZITADEL_CLIENT_ID=${zitadel_application_oidc.open_donate_web.client_id}
-ZITADEL_CLIENT_SECRET=${zitadel_application_oidc.open_donate_web.client_secret}
-ZITADEL_REDIRECT_URI=http://localhost:3000/api/auth/callback
+OIDC_ISSUER=http://localhost:8080/realms/open-donate
+OIDC_CLIENT_ID=${keycloak_openid_client.open_donate_web.client_id}
+OIDC_CLIENT_SECRET=${keycloak_openid_client.open_donate_web.client_secret}
+OIDC_REDIRECT_URI=http://localhost:3000/api/auth/callback
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/open_donate
 EOF
 }

@@ -1,53 +1,42 @@
 services:
-  zitadel:
-    restart: "always"
-    networks:
-      - "zitadel"
-    image: "ghcr.io/zitadel/zitadel:latest"
-    command: 'start-from-init --config /example-zitadel-config.yaml --config /example-zitadel-secrets.yaml --steps /example-zitadel-init-steps.yaml --masterkey "${ZITADEL_MASTERKEY:-Masterkey12345678901234567890123}" --tlsMode disabled'
-    ports:
-      - "8080:8080"
-    volumes:
-      - "./example-zitadel-config.yaml:/example-zitadel-config.yaml:ro"
-      - "./example-zitadel-secrets.yaml:/example-zitadel-secrets.yaml:ro"
-      - "./example-zitadel-init-steps.yaml:/example-zitadel-init-steps.yaml:ro"
-      - "./shared:/shared:rw"
-    depends_on:
-      db:
-        condition: "service_healthy"
-
-  zitadel-setup:
-    image: hashicorp/terraform:latest
-    user: "root"
-    entrypoint: /bin/sh
-    command: -c "until nc -z zitadel 8080; do sleep 1; done && until [ -f /shared/setup-bot-pat.txt ]; do sleep 1; done && export TF_VAR_zitadel_token=\"\$(cat /shared/setup-bot-pat.txt)\" && terraform -chdir=/terraform init && terraform -chdir=/terraform apply -auto-approve"
-    volumes:
-      - "./terraform:/terraform:rw"
-      - "./shared:/shared:ro"
-      - ".:/app:rw"
-    networks:
-      - "zitadel"
-    depends_on:
-      zitadel:
-        condition: "service_started"
-
-  db:
+  keycloak-db:
     image: postgres:17-alpine
     restart: always
     environment:
-      - POSTGRES_USER=root
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=zitadel
+      - POSTGRES_USER=keycloak
+      - POSTGRES_PASSWORD=keycloak
+      - POSTGRES_DB=keycloak
     networks:
-      - 'zitadel'
+      - keycloak-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d zitadel -U root"]
+      test: ["CMD-SHELL", "pg_isready -d keycloak -U keycloak"]
       interval: 10s
       timeout: 30s
       retries: 5
-      start_period: 20s
+      start_period: 10s
     volumes:
-      - 'data:/var/lib/postgresql/data:rw'
+      - 'keycloak_db_data:/var/lib/postgresql/data:rw'
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    restart: always
+    environment:
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://keycloak-db:5432/keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=keycloak
+      - KEYCLOAK_ADMIN=admin
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+    command: start-dev
+    ports:
+      - "8080:8080"
+    networks:
+      - keycloak-net
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
 
   app-db:
     image: postgres:17-alpine
@@ -62,9 +51,8 @@ services:
       - 'app_db_data:/var/lib/postgresql/data:rw'
 
 networks:
-  zitadel:
+  keycloak-net:
 
 volumes:
-  data:
+  keycloak_db_data:
   app_db_data:
-

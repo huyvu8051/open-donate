@@ -7,6 +7,21 @@ use leptos_router::{
 };
 use crate::auth::User;
 use crate::db::{DbStreamer, DbTransaction};
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct MockPaymentInit {
+    pub tx_id: i32,
+    pub status: String,
+    pub display_qr: Option<String>,
+    pub display_url: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct MockPaymentStatus {
+    pub tx_id: i32,
+    pub status: String,
+}
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -44,6 +59,7 @@ pub fn App() -> impl IntoView {
         <Router>
             <Routes fallback=|| "Page not found.".into_view()>
                 <Route path=StaticSegment("") view=LandingPage/>
+                <Route path=StaticSegment("dashboard") view=crate::dashboard::DashboardPage/>
                 <Route path=(StaticSegment("streamer"), ParamSegment("username")) view=StreamerPage/>
             </Routes>
         </Router>
@@ -329,6 +345,20 @@ pub fn StreamerPage() -> impl IntoView {
     let message = RwSignal::new("".to_string());
     let payment_method = RwSignal::new("Credit Card".to_string());
     let transactions_trigger = RwSignal::new(0);
+    let form_error = RwSignal::new(None::<String>);
+
+    let show_payment_window = RwSignal::new(false);
+    let otp = RwSignal::new("".to_string());
+    let mock_tx_id = RwSignal::new(None::<i32>);
+    let mock_tx_status = RwSignal::new("".to_string());
+    let mock_display_qr = RwSignal::new(None::<String>);
+    let mock_display_url = RwSignal::new(None::<String>);
+
+    #[cfg(feature = "hydrate")]
+    let poll_interval: StoredValue<
+        Option<gloo_timers::callback::Interval>,
+        leptos::prelude::LocalStorage,
+    > = StoredValue::new_local(None);
 
     // Load profile info from database using URL param
     let streamer_resource = Resource::new(move || username(), |uname| get_streamer(uname));
@@ -345,7 +375,7 @@ pub fn StreamerPage() -> impl IntoView {
         }
     );
 
-    let donate_action = Action::new(move |_: &()| {
+    let payment_action = Action::new(move |_: &()| {
         let amt_val = amount.get_untracked().parse::<f64>().unwrap_or(0.0);
         let donor = donor_name.get_untracked();
         let msg = message.get_untracked();
@@ -355,32 +385,78 @@ pub fn StreamerPage() -> impl IntoView {
             _ => 1,
         };
         async move {
-            create_donation(streamer_id, donor, amt_val, msg, pm).await
+            create_mock_payment(streamer_id, donor, amt_val, msg, pm).await
         }
     });
 
-    // React to donation result
+    // React to payment init
     Effect::new(move || {
-        if let Some(result) = donate_action.value().get() {
+        if let Some(result) = payment_action.value().get() {
             match result {
-                Ok(_) => {
-                    donor_name.set("".to_string());
-                    message.set("".to_string());
-                    transactions_trigger.update(|t| *t += 1);
+                Ok(init) => {
+                    show_payment_window.set(true);
+                    mock_tx_id.set(Some(init.tx_id));
+                    mock_tx_status.set(init.status);
+                    mock_display_qr.set(init.display_qr);
+                    mock_display_url.set(init.display_url);
+
+                    #[cfg(feature = "hydrate")]
+                    {
+                        use gloo_timers::callback::Interval;
+                        use wasm_bindgen_futures::spawn_local;
+
+                        poll_interval.update_value(|existing| {
+                            existing.take();
+                        });
+                        let interval = Interval::new(500, move || {
+                            if let Some(tx_id) = mock_tx_id.get_untracked() {
+                                spawn_local(async move {
+                                    if let Ok(status) = get_mock_payment_status(tx_id).await {
+                                        let new_status = status.status;
+                                        mock_tx_status.set(new_status.clone());
+                                        if new_status == "READY_FOR_DISPLAY" {
+                                            poll_interval.update_value(|existing| {
+                                                existing.take();
+                                            });
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                        poll_interval.set_value(Some(interval));
+                    }
                 }
                 Err(e) => {
-                    leptos::logging::error!("Donation submission failed: {:?}", e);
+                    leptos::logging::error!("Payment init failed: {:?}", e);
                 }
             }
         }
     });
 
     let handle_submit = move |_| {
-        let amt_val = amount.get().parse::<f64>().unwrap_or(0.0);
+        let amt_val = amount.get().trim().parse::<f64>().unwrap_or(-1.0);
         if amt_val <= 0.0 {
+            form_error.set(Some("Please enter a valid amount.".to_string()));
             return;
         }
-        donate_action.dispatch(());
+        if payment_method.get().trim().is_empty() {
+            form_error.set(Some("Please select a payment method.".to_string()));
+            return;
+        }
+        form_error.set(None);
+        show_payment_window.set(false);
+        otp.set("".to_string());
+        mock_tx_id.set(None);
+        mock_tx_status.set("INITIALIZE".to_string());
+        mock_display_qr.set(None);
+        mock_display_url.set(None);
+
+        #[cfg(feature = "hydrate")]
+        poll_interval.update_value(|existing| {
+            existing.take();
+        });
+
+        payment_action.dispatch(());
     };
 
     view! {
@@ -546,6 +622,75 @@ pub fn StreamerPage() -> impl IntoView {
                       >
                           "Donate Now"
                       </button>
+                      {move || {
+                          form_error.get().map(|err| view! {
+                              <div class="mt-base bg-error-container/20 border border-error/30 text-error rounded-xl px-md py-sm text-body-sm">
+                                  {err}
+                              </div>
+                          })
+                      }}
+
+                      {move || if show_payment_window.get() {
+                          let status = mock_tx_status.get();
+                          view! {
+                              <div class="mt-base bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md flex flex-col gap-base">
+                                  <div class="flex items-center justify-between">
+                                      <div class="text-on-surface font-semibold">"Mock payment (test)"</div>
+                                      <div class="text-label-sm text-on-surface-variant">
+                                          "Status: " <span class="text-on-surface">{status.clone()}</span>
+                                      </div>
+                                  </div>
+
+                                  {move || {
+                                      if let Some(qr) = mock_display_qr.get() {
+                                          view! {
+                                              <div class="flex flex-col gap-xs">
+                                                  <div class="text-label-sm text-on-surface-variant">"QR (mock)"</div>
+                                                  <pre class="bg-surface-container-low/40 border border-white/10 rounded-xl p-sm text-body-sm overflow-x-auto text-on-surface">{qr}</pre>
+                                              </div>
+                                          }.into_any()
+                                      } else if let Some(url) = mock_display_url.get() {
+                                          let href = url.clone();
+                                          view! {
+                                              <div class="flex flex-col gap-xs">
+                                                  <div class="text-label-sm text-on-surface-variant">"Payment link (mock)"</div>
+                                                  <a class="text-primary underline break-all" href=href target="_blank" rel="noopener noreferrer">{url}</a>
+                                              </div>
+                                          }.into_any()
+                                      } else {
+                                          view! {}.into_any()
+                                      }
+                                  }}
+
+                                  <div class="flex flex-col gap-xs">
+                                      <label class="text-label-sm text-on-surface-variant">"OTP (mock)"</label>
+                                      <input
+                                          class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl px-md py-sm text-body-md focus:outline-none focus:border-primary transition-all text-on-surface"
+                                          placeholder="Enter OTP (any value)"
+                                          type="text"
+                                          prop:value=move || otp.get()
+                                          on:input=move |ev| otp.set(event_target_value(&ev))
+                                      />
+                                  </div>
+
+                                  {move || if status == "READY_FOR_DISPLAY" {
+                                      view! {
+                                          <div class="bg-secondary/10 border border-secondary/20 text-secondary rounded-xl px-md py-sm">
+                                              "Payment success (mock)"
+                                          </div>
+                                      }.into_any()
+                                  } else {
+                                      view! {
+                                          <div class="text-on-surface-variant text-body-sm">
+                                              "Waiting for payment to be ready..."
+                                          </div>
+                                      }.into_any()
+                                  }}
+                              </div>
+                          }.into_any()
+                      } else {
+                          view! {}.into_any()
+                      }}
                       <p class="text-center text-label-sm font-label-sm text-on-surface-variant">"Glint matches 5% of all stream donations today."</p>
                   </section>
               </div>
@@ -653,7 +798,7 @@ pub async fn get_streamer(username: String) -> Result<Option<DbStreamer>, Server
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let row = sqlx::query(
-        "SELECT id, username, display_name, avatar_url, bio, is_live FROM streamers WHERE username = $1"
+        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id FROM streamers WHERE username = $1"
     )
     .bind(username)
     .fetch_optional(&pool)
@@ -670,10 +815,91 @@ pub async fn get_streamer(username: String) -> Result<Option<DbStreamer>, Server
                 avatar_url: r.get("avatar_url"),
                 bio: r.get("bio"),
                 is_live: r.get("is_live"),
+                user_id: r.try_get("user_id").unwrap_or(None),
             }))
         }
         None => Ok(None),
     }
+}
+
+#[server(GetOrCreateStreamer, "/api")]
+pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnError> {
+    let user = match get_me().await? {
+        Some(u) => u,
+        None => return Ok(None),
+    };
+
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    let existing = sqlx::query(
+        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id FROM streamers WHERE user_id = $1"
+    )
+    .bind(&user.id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+
+    use sqlx::Row;
+
+    if let Some(r) = existing {
+        return Ok(Some(DbStreamer {
+            id: r.get("id"),
+            username: r.get("username"),
+            display_name: r.get("display_name"),
+            avatar_url: r.get("avatar_url"),
+            bio: r.get("bio"),
+            is_live: r.get("is_live"),
+            user_id: r.try_get("user_id").unwrap_or(None),
+        }));
+    }
+
+    let prefix = user.email.split('@').next().unwrap_or("user").to_string();
+    let mut username = prefix.clone();
+
+    for _ in 0..10 {
+        let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM streamers WHERE username = $1)")
+            .bind(&username)
+            .fetch_one(&pool)
+            .await
+            .unwrap_or(true);
+
+        if !exists {
+            break;
+        }
+
+        let random_num = rand::random::<u16>();
+        username = format!("{}_{}", prefix, random_num);
+    }
+
+    let display_name = if user.name.is_empty() { prefix.clone() } else { user.name.clone() };
+    let bio = "New to Glint!".to_string();
+    let avatar_url = format!("https://ui-avatars.com/api/?name={}", urlencoding::encode(&display_name));
+
+    let row = sqlx::query(
+        "INSERT INTO streamers (username, display_name, avatar_url, bio, is_live, user_id)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id, username, display_name, avatar_url, bio, is_live, user_id"
+    )
+    .bind(&username)
+    .bind(&display_name)
+    .bind(&avatar_url)
+    .bind(&bio)
+    .bind(false)
+    .bind(&user.id)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database insert failed: {}", e)))?;
+
+    Ok(Some(DbStreamer {
+        id: row.get("id"),
+        username: row.get("username"),
+        display_name: row.get("display_name"),
+        avatar_url: row.get("avatar_url"),
+        bio: row.get("bio"),
+        is_live: row.get("is_live"),
+        user_id: row.try_get("user_id").unwrap_or(None),
+    }))
 }
 
 #[server(GetAllStreamers, "/api")]
@@ -697,6 +923,7 @@ pub async fn get_all_streamers() -> Result<Vec<DbStreamer>, ServerFnError> {
             avatar_url: r.get("avatar_url"),
             bio: r.get("bio"),
             is_live: r.get("is_live"),
+            user_id: r.try_get("user_id").unwrap_or(None),
         }
     }).collect();
 
@@ -710,7 +937,7 @@ pub async fn create_donation(
     amount: f64,
     message: String,
     payment_method: String,
-) -> Result<(), ServerFnError> {
+) -> Result<i32, ServerFnError> {
     let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
@@ -726,20 +953,108 @@ pub async fn create_donation(
         Some(message)
     };
 
-    sqlx::query(
-        "INSERT INTO transactions (streamer_id, donor_name, amount, message, payment_method)
-         VALUES ($1, $2, $3, $4, $5)"
+    let row = sqlx::query(
+        "INSERT INTO transactions (streamer_id, donor_name, amount, message, payment_method)\n         VALUES ($1, $2, $3, $4, $5)\n         RETURNING id"
     )
     .bind(streamer_id)
     .bind(donor)
     .bind(amount)
     .bind(message_opt)
     .bind(payment_method)
-    .execute(&pool)
+    .fetch_one(&pool)
     .await
     .map_err(|e| ServerFnError::new(format!("Database insert failed: {}", e)))?;
 
-    Ok(())
+    use sqlx::Row;
+    Ok(row.get::<i32, _>("id"))
+}
+
+#[cfg(feature = "ssr")]
+mod mock_payments {
+    use once_cell::sync::Lazy;
+    use std::collections::HashMap;
+    use tokio::sync::RwLock;
+
+    #[derive(Clone, Debug)]
+    pub struct MockTxState {
+        pub status: String,
+    }
+
+    pub static MOCK_TXS: Lazy<RwLock<HashMap<i32, MockTxState>>> =
+        Lazy::new(|| RwLock::new(HashMap::new()));
+}
+
+#[server(CreateMockPayment, "/api")]
+pub async fn create_mock_payment(
+    streamer_id: i32,
+    donor_name: String,
+    amount: f64,
+    message: String,
+    payment_method: String,
+) -> Result<MockPaymentInit, ServerFnError> {
+    let tx_id = create_donation(
+        streamer_id,
+        donor_name,
+        amount,
+        message,
+        payment_method.clone(),
+    )
+    .await?;
+
+    let (display_qr, display_url) = match payment_method.as_str() {
+        "Crypto" => (Some(format!("MOCK-QR:tx_id={tx_id};amount={amount:.2}")), None),
+        "PayPal" => (None, Some(format!("https://example.com/mock-pay?provider=paypal&tx_id={tx_id}"))),
+        _ => (None, Some(format!("https://example.com/mock-pay?provider=card&tx_id={tx_id}"))),
+    };
+
+    #[cfg(feature = "ssr")]
+    {
+        use tokio::time::{sleep, Duration};
+
+        mock_payments::MOCK_TXS
+            .write()
+            .await
+            .insert(tx_id, mock_payments::MockTxState { status: "INITIALIZE".to_string() });
+
+        let delay_ms = 2000u64 + (chrono::Utc::now().timestamp_subsec_millis() as u64 % 3001u64);
+        tokio::spawn(async move {
+            sleep(Duration::from_millis(delay_ms)).await;
+            if let Some(state) = mock_payments::MOCK_TXS.write().await.get_mut(&tx_id) {
+                state.status = "READY_FOR_DISPLAY".to_string();
+            }
+        });
+    }
+
+    Ok(MockPaymentInit {
+        tx_id,
+        status: "INITIALIZE".to_string(),
+        display_qr,
+        display_url,
+    })
+}
+
+#[server(GetMockPaymentStatus, "/api")]
+pub async fn get_mock_payment_status(tx_id: i32) -> Result<MockPaymentStatus, ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        let status = mock_payments::MOCK_TXS
+            .read()
+            .await
+            .get(&tx_id)
+            .map(|s| s.status.clone())
+            .unwrap_or_else(|| "INITIALIZE".to_string());
+
+        return Ok(MockPaymentStatus { tx_id, status });
+    }
+
+    #[cfg(not(feature = "ssr"))]
+    {
+        let _ = tx_id;
+        Ok(MockPaymentStatus {
+            tx_id,
+            status: "INITIALIZE".to_string(),
+        })
+    }
 }
 
 #[server(GetRecentTransactions, "/api")]

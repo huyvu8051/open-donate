@@ -8,6 +8,7 @@ pub struct DbStreamer {
     pub avatar_url: String,
     pub bio: String,
     pub is_live: bool,
+    pub user_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -36,14 +37,15 @@ pub mod db_ops {
 
         if !exists {
             sqlx::query(
-                "INSERT INTO streamers (username, display_name, avatar_url, bio, is_live)
-                 VALUES ($1, $2, $3, $4, $5)"
+                "INSERT INTO streamers (username, display_name, avatar_url, bio, is_live, user_id)
+                 VALUES ($1, $2, $3, $4, $5, $6)"
             )
             .bind("neonviper")
             .bind("NeonViper")
             .bind("https://lh3.googleusercontent.com/aida-public/AB6AXuBLjEWKtvutw2bXJ6cXjX35VKSvndfcZFjksgkktDcFmWKH5w3JqiRsBENEnrWm0JHREPHPBQRwTGM2krlAjj-4IyFB_LtaFrMOvwlpVF-S4Wn-Qpc0Of9KKyyIayT9k7z69aL3NoVoXBzHPX-ZTbmlTm1ZFFq2kN49w8irdbwsj0edERW-AXu_cuLLa2XaiDOHQM4f5mbEU5MqTwigjzU5okvpS1kdr5WuV-yhcWwXphzBaqQ11rEVUtD0TpCxcHePnYEOrnYJOdc")
             .bind("Pushing the boundaries of competitive play. Today we're smashing the charity goals for the Digital Oceans Fund!")
             .bind(true)
+            .bind(Some("seed_user_neonviper"))
             .execute(pool)
             .await?;
         }
