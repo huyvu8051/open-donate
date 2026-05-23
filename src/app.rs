@@ -59,6 +59,7 @@ pub fn App() -> impl IntoView {
         <Router>
             <Routes fallback=|| "Page not found.".into_view()>
                 <Route path=StaticSegment("") view=LandingPage/>
+                <Route path=StaticSegment("explore") view=ExplorePage/>
                 <Route path=StaticSegment("dashboard") view=crate::dashboard::DashboardPage/>
                 <Route path=(StaticSegment("streamer"), ParamSegment("username")) view=StreamerPage/>
             </Routes>
@@ -76,7 +77,7 @@ pub fn Header() -> impl IntoView {
             <div class="flex items-center gap-md">
                 <a href="/" class="text-headline-md font-headline-md font-extrabold text-primary tracking-tighter">"Glint"</a>
                 <nav class="hidden md:flex items-center gap-md ml-lg">
-                    <a class="text-primary font-bold border-b-2 border-primary pb-1 text-label-md font-label-md hover:text-primary transition-colors" href="/streamer/neonviper">"Explore"</a>
+                    <a class="text-primary font-bold border-b-2 border-primary pb-1 text-label-md font-label-md hover:text-primary transition-colors" href="/explore">"Explore"</a>
                     <a class="text-on-surface-variant font-medium text-label-md font-label-md hover:text-primary transition-colors" href="#">"Creators"</a>
                     <a class="text-on-surface-variant font-medium text-label-md font-label-md hover:text-primary transition-colors" href="#">"Leaderboard"</a>
                 </nav>
@@ -171,6 +172,88 @@ pub fn Hero() -> impl IntoView {
                 </div>
             </div>
         </section>
+    }
+}
+
+#[component]
+pub fn ExplorePage() -> impl IntoView {
+    let streamers_resource = Resource::new(|| (), |_| get_all_streamers());
+
+    view! {
+        <Header/>
+        <main class="pt-24 pb-xl px-margin-mobile md:px-margin-desktop min-h-screen">
+            <div class="max-w-7xl mx-auto flex flex-col gap-xl">
+                <div class="flex flex-col gap-xs text-center">
+                    <h1 class="text-display-sm md:text-display-md font-display-md font-extrabold text-on-surface tracking-tight">
+                        "Explore Creators"
+                    </h1>
+                    <p class="text-headline-sm font-headline-sm text-on-surface-variant max-w-2xl mx-auto">
+                        "Discover and support your favorite live streamers."
+                    </p>
+                </div>
+
+                <Suspense fallback=move || view! { <div class="text-center text-on-surface-variant mt-xl">"Loading streamers..."</div> }>
+                    {move || {
+                        streamers_resource.get().map(|res| match res {
+                            Ok(streamers) => {
+                                if streamers.is_empty() {
+                                    view! {
+                                        <div class="text-center text-on-surface-variant mt-xl">"No streamers found."</div>
+                                    }.into_any()
+                                } else {
+                                    view! {
+                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-lg">
+                                            {streamers.into_iter().map(|s| {
+                                                let profile_url = format!("/streamer/{}", s.username);
+                                                let avatar = if s.avatar_url.is_empty() { "https://api.dicebear.com/9.x/avataaars/svg".to_string() } else { s.avatar_url.clone() };
+                                                let display_name = if s.display_name.is_empty() { s.username.clone() } else { s.display_name.clone() };
+                                                
+                                                view! {
+                                                    <a data-testid="streamer-card" href=profile_url class="group flex flex-col gap-md bg-surface-container-low/40 backdrop-blur-md border border-white/10 rounded-2xl p-lg hover:border-primary/50 transition-all hover:transform hover:-translate-y-1">
+                                                        <div class="flex items-center gap-md">
+                                                            <div class="relative w-20 h-20 shrink-0">
+                                                                <img src=avatar class="w-full h-full rounded-full object-cover bg-surface-container-highest border border-white/10"/>
+                                                                {if s.is_live {
+                                                                    view! {
+                                                                        <div class="absolute -bottom-1 -right-1 bg-error text-on-error text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-surface animate-pulse">
+                                                                            "LIVE"
+                                                                        </div>
+                                                                    }.into_any()
+                                                                } else {
+                                                                    view! {}.into_any()
+                                                                }}
+                                                            </div>
+                                                            <div class="flex flex-col overflow-hidden">
+                                                                <h3 data-testid="streamer-display-name" class="text-headline-sm font-headline-sm text-on-surface font-bold truncate">
+                                                                    {display_name}
+                                                                </h3>
+                                                                <p data-testid="streamer-username" class="text-label-md font-label-md text-on-surface-variant truncate">
+                                                                    "@" {s.username.clone()}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <p class="text-body-md font-body-md text-on-surface-variant line-clamp-2 mt-xs min-h-[3rem]">
+                                                            {s.bio.clone()}
+                                                        </p>
+                                                        <div class="mt-auto pt-sm flex justify-end">
+                                                            <span class="text-primary text-label-md font-label-md font-bold group-hover:underline">"View Profile →"</span>
+                                                        </div>
+                                                    </a>
+                                                }
+                                            }).collect_view()}
+                                        </div>
+                                    }.into_any()
+                                }
+                            }
+                            Err(_) => view! {
+                                <div class="text-center text-error mt-xl">"Failed to load streamers."</div>
+                            }.into_any()
+                        })
+                    }}
+                </Suspense>
+            </div>
+        </main>
+        <Footer/>
     }
 }
 
@@ -361,19 +444,22 @@ pub fn StreamerPage() -> impl IntoView {
     > = StoredValue::new_local(None);
 
     // Load profile info from database using URL param
-    let streamer_resource = Resource::new(move || username(), |uname| get_streamer(uname));
+    let streamer_resource = LocalResource::new(move || {
+        let uname = username();
+        async move { get_streamer(uname).await }
+    });
 
     // Load recent transactions
-    let transactions_resource = Resource::new(
-        move || transactions_trigger.get(),
-        move |_| async move {
-            let streamer_id = match streamer_resource.get() {
-                Some(Ok(Some(s))) => s.id,
-                _ => 1,
-            };
-            get_recent_transactions(streamer_id).await
+    let transactions_resource = LocalResource::new(move || {
+        transactions_trigger.track();
+        let uname = username();
+        async move {
+            if uname.is_empty() {
+                return Ok(vec![]);
+            }
+            get_recent_transactions(uname).await
         }
-    );
+    });
 
     let payment_action = Action::new(move |_: &()| {
         let amt_val = amount.get_untracked().parse::<f64>().unwrap_or(0.0);
@@ -418,6 +504,7 @@ pub fn StreamerPage() -> impl IntoView {
                                             poll_interval.update_value(|existing| {
                                                 existing.take();
                                             });
+                                            transactions_trigger.update(|n| *n += 1);
                                         }
                                     }
                                 });
@@ -531,6 +618,7 @@ pub fn StreamerPage() -> impl IntoView {
                       <div class="flex flex-col gap-base">
                           <label class="text-label-md font-label-md text-on-surface-variant">"Your Name"</label>
                           <input 
+                              data-testid="donor-name-input"
                               class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl px-md py-md text-body-md font-body-md focus:outline-none focus:border-primary transition-all text-on-surface" 
                               placeholder="Enter your name (e.g. Anonymous)" 
                               type="text"
@@ -580,6 +668,7 @@ pub fn StreamerPage() -> impl IntoView {
                       <div class="flex flex-col gap-base">
                           <label class="text-label-md font-label-md text-on-surface-variant">"Your Message"</label>
                           <textarea 
+                              data-testid="donation-message-input"
                               class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl px-md py-md text-body-md font-body-md focus:outline-none focus:border-primary transition-all min-h-[120px] resize-none text-on-surface" 
                               placeholder="Enter a message to be read on stream..."
                               prop:value=move || message.get()
@@ -617,6 +706,7 @@ pub fn StreamerPage() -> impl IntoView {
 
                       // Donate Now Button
                       <button 
+                          data-testid="donate-submit-btn"
                           class="bg-secondary-container text-on-secondary-container py-md rounded-xl text-headline-md font-headline-md hover:shadow-[0_0_30px_rgba(0,181,93,0.3)] transition-all mt-base active:scale-[0.98]"
                           on:click=handle_submit
                       >
@@ -665,6 +755,7 @@ pub fn StreamerPage() -> impl IntoView {
                                   <div class="flex flex-col gap-xs">
                                       <label class="text-label-sm text-on-surface-variant">"OTP (mock)"</label>
                                       <input
+                                          data-testid="mock-otp-input"
                                           class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl px-md py-sm text-body-md focus:outline-none focus:border-primary transition-all text-on-surface"
                                           placeholder="Enter OTP (any value)"
                                           type="text"
@@ -675,7 +766,7 @@ pub fn StreamerPage() -> impl IntoView {
 
                                   {move || if status == "READY_FOR_DISPLAY" {
                                       view! {
-                                          <div class="bg-secondary/10 border border-secondary/20 text-secondary rounded-xl px-md py-sm">
+                                          <div data-testid="payment-success-msg" class="bg-secondary/10 border border-secondary/20 text-secondary rounded-xl px-md py-sm">
                                               "Payment success (mock)"
                                           </div>
                                       }.into_any()
@@ -696,7 +787,7 @@ pub fn StreamerPage() -> impl IntoView {
               </div>
 
               // Recent Tributes Section
-              <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md md:p-xl flex flex-col gap-md">
+              <section data-testid="recent-tributes-section" class="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md md:p-xl flex flex-col gap-md">
                   <div class="flex items-center gap-sm">
                       <span class="material-symbols-outlined text-primary" data-icon="history">"history"</span>
                       <h2 class="text-headline-md font-headline-md text-on-surface">"Recent Tributes"</h2>
@@ -755,41 +846,13 @@ pub fn StreamerPage() -> impl IntoView {
 
 #[server(GetMe, "/api")]
 pub async fn get_me() -> Result<Option<User>, ServerFnError> {
-    use axum::http::HeaderMap;
-    let headers = match leptos_axum::extract::<HeaderMap>().await {
-        Ok(h) => h,
+    let session = match leptos_axum::extract::<tower_sessions::Session>().await {
+        Ok(s) => s,
         Err(_) => return Ok(None),
     };
 
-    let cookie_header = match headers.get(axum::http::header::COOKIE) {
-        Some(value) => match value.to_str() {
-            Ok(s) => s,
-            Err(_) => return Ok(None),
-        },
-        None => return Ok(None),
-    };
-
-    let mut token = None;
-    for cookie in cookie_header.split(';') {
-        let parts: Vec<&str> = cookie.trim().split('=').collect();
-        if parts.len() == 2 && parts[0].trim() == "auth_token" {
-            token = Some(parts[1].to_string());
-            break;
-        }
-    }
-
-    let token = match token {
-        Some(t) => t,
-        None => return Ok(None),
-    };
-
-    match crate::auth::validation::validate_jwt(&token).await {
-        Ok(user) => Ok(Some(user)),
-        Err(e) => {
-            eprintln!("JWT validation error: {:?}", e);
-            Ok(None)
-        }
-    }
+    let user: Option<User> = session.get("user").await.unwrap_or(None);
+    Ok(user)
 }
 
 #[server(GetStreamer, "/api")]
@@ -908,7 +971,7 @@ pub async fn get_all_streamers() -> Result<Vec<DbStreamer>, ServerFnError> {
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let rows = sqlx::query(
-        "SELECT id, username, display_name, avatar_url, bio, is_live FROM streamers ORDER BY id"
+        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id FROM streamers ORDER BY is_live DESC, id DESC"
     )
     .fetch_all(&pool)
     .await
@@ -1058,18 +1121,19 @@ pub async fn get_mock_payment_status(tx_id: i32) -> Result<MockPaymentStatus, Se
 }
 
 #[server(GetRecentTransactions, "/api")]
-pub async fn get_recent_transactions(streamer_id: i32) -> Result<Vec<DbTransaction>, ServerFnError> {
+pub async fn get_recent_transactions(username: String) -> Result<Vec<DbTransaction>, ServerFnError> {
     let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let rows = sqlx::query(
-        "SELECT id, streamer_id, donor_name, amount, message, payment_method, TO_CHAR(created_at, 'YYYY-MM-DD HH:MI AM') as formatted_date 
-         FROM transactions 
-         WHERE streamer_id = $1 
-         ORDER BY id DESC 
+        "SELECT t.id, t.streamer_id, t.donor_name, t.amount, t.message, t.payment_method, TO_CHAR(t.created_at, 'YYYY-MM-DD HH:MI AM') as formatted_date 
+         FROM transactions t
+         JOIN streamers s ON t.streamer_id = s.id
+         WHERE s.username = $1 
+         ORDER BY t.id DESC 
          LIMIT 10"
     )
-    .bind(streamer_id)
+    .bind(username)
     .fetch_all(&pool)
     .await
     .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
@@ -1089,3 +1153,49 @@ pub async fn get_recent_transactions(streamer_id: i32) -> Result<Vec<DbTransacti
 
     Ok(txs)
 }
+
+#[server(GetDashboardTransactions, "/api")]
+pub async fn get_dashboard_transactions(streamer_id: i32, page: i64, page_size: i64) -> Result<(Vec<DbTransaction>, i64), ServerFnError> {
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    let offset = (page - 1) * page_size;
+
+    let count_row = sqlx::query!("SELECT COUNT(*) as count FROM transactions WHERE streamer_id = $1", streamer_id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| ServerFnError::new(format!("Database count failed: {}", e)))?;
+        
+    let total_count = count_row.count.unwrap_or(0);
+
+    let rows = sqlx::query(
+        "SELECT t.id, t.streamer_id, t.donor_name, t.amount, t.message, t.payment_method, TO_CHAR(t.created_at, 'YYYY-MM-DD HH:MI AM') as formatted_date 
+         FROM transactions t
+         WHERE t.streamer_id = $1 
+         ORDER BY t.id DESC 
+         LIMIT $2 OFFSET $3"
+    )
+    .bind(streamer_id)
+    .bind(page_size)
+    .bind(offset)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+
+    use sqlx::Row;
+    let txs = rows.into_iter().map(|r| {
+        DbTransaction {
+            id: r.get("id"),
+            streamer_id: r.get("streamer_id"),
+            donor_name: r.get("donor_name"),
+            amount: r.get("amount"),
+            message: r.get("message"),
+            payment_method: r.get("payment_method"),
+            created_at: r.get("formatted_date"),
+        }
+    }).collect();
+
+    Ok((txs, total_count))
+}
+
+

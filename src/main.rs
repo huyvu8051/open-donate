@@ -30,6 +30,16 @@ async fn main() {
     // Generate the list of routes in your Leptos App
     let routes = generate_route_list(App);
 
+    use tower_sessions::{SessionManagerLayer, Expiry};
+    use tower_sessions_sqlx_store::PostgresStore;
+
+    let session_store = PostgresStore::new(pool.clone());
+    session_store.migrate().await.unwrap();
+
+    let session_layer = SessionManagerLayer::new(session_store)
+        .with_secure(false)
+        .with_expiry(Expiry::OnInactivity(tower_sessions::cookie::time::Duration::days(14)));
+
     let app = Router::new()
         .route("/api/login", axum::routing::get(open_donate::auth::handlers::login))
         .route("/api/auth/callback", axum::routing::get(open_donate::auth::handlers::callback))
@@ -42,6 +52,7 @@ async fn main() {
         })
         .fallback(leptos_axum::file_and_error_handler(shell))
         .layer(axum::Extension(pool))
+        .layer(session_layer)
         .with_state(leptos_options);
 
     // run our app with hyper

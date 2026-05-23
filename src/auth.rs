@@ -40,7 +40,10 @@ pub mod handlers {
         Redirect::to(&url)
     }
 
-    pub async fn callback(Query(params): Query<CallbackParams>) -> impl IntoResponse {
+    pub async fn callback(
+        session: tower_sessions::Session,
+        Query(params): Query<CallbackParams>,
+    ) -> impl IntoResponse {
         let client_id = std::env::var("OIDC_CLIENT_ID").unwrap_or_default();
         let client_secret = std::env::var("OIDC_CLIENT_SECRET").unwrap_or_default();
         let redirect_uri = std::env::var("OIDC_REDIRECT_URI").unwrap_or_default();
@@ -63,16 +66,18 @@ pub mod handlers {
                 if status.is_success() {
                     match resp.json::<TokenResponse>().await {
                         Ok(token_resp) => {
-                            // Set cookie and redirect to home page
-                            let cookie = format!(
-                                "auth_token={}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400",
-                                token_resp.id_token
-                            );
-                            return (
-                                [(axum::http::header::SET_COOKIE, cookie)],
-                                Redirect::to("/"),
-                            )
-                                .into_response();
+                            // Validate JWT and get User
+                            match crate::auth::validation::validate_jwt(&token_resp.id_token).await {
+                                Ok(user) => {
+                                    if let Err(e) = session.insert("user", user).await {
+                                        eprintln!("Failed to save session: {:?}", e);
+                                    }
+                                    return Redirect::to("/dashboard").into_response();
+                                }
+                                Err(e) => {
+                                    eprintln!("Failed to validate JWT: {:?}", e);
+                                }
+                            }
                         }
                         Err(e) => {
                             eprintln!("Failed to parse token JSON: {:?}", e);
@@ -88,13 +93,12 @@ pub mod handlers {
             }
         }
 
-        Redirect::to("/").into_response()
+        Redirect::to("/dashboard").into_response()
     }
 
-    pub async fn logout() -> impl IntoResponse {
-        // Clear cookie
-        let cookie = "auth_token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0";
-        ([(axum::http::header::SET_COOKIE, cookie)], Redirect::to("/")).into_response()
+    pub async fn logout(session: tower_sessions::Session) -> impl IntoResponse {
+        let _ = session.delete().await;
+        Redirect::to("/").into_response()
     }
 }
 
