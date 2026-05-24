@@ -41,8 +41,8 @@ pub mod db_ops {
 
         if !exists {
             sqlx::query(
-                "INSERT INTO streamers (username, display_name, avatar_url, bio, is_live, user_id)
-                 VALUES ($1, $2, $3, $4, $5, $6)"
+                "INSERT INTO streamers (username, display_name, avatar_url, bio, is_live, user_id, overlay_token)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)"
             )
             .bind("neonviper")
             .bind("NeonViper")
@@ -50,6 +50,7 @@ pub mod db_ops {
             .bind("Pushing the boundaries of competitive play. Today we're smashing the charity goals for the Digital Oceans Fund!")
             .bind(true)
             .bind(Some("seed_user_neonviper"))
+            .bind("seed_overlay_token_neonviper")
             .execute(pool)
             .await?;
         }
