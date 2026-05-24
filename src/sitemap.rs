@@ -8,7 +8,7 @@ use axum::{
 use sqlx::PgPool;
 
 /// Handler for GET /sitemap.xml
-/// Dynamically generates a sitemap including all streamer pages.
+/// Dynamically generates a sitemap including all public pages and streamer pages.
 pub async fn sitemap_xml(Extension(pool): Extension<PgPool>) -> impl IntoResponse {
     let base_url = std::env::var("SITE_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
 
@@ -24,16 +24,28 @@ pub async fn sitemap_xml(Extension(pool): Extension<PgPool>) -> impl IntoRespons
     let mut xml = String::from(r#"<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">"#);
 
-    // Homepage
-    xml.push_str(&format!(
-        r#"
+    // Static public pages
+    let static_pages = [
+        ("/", "1.0", "daily"),
+        ("/explore", "0.9", "hourly"),
+        ("/leaderboard", "0.8", "hourly"),
+        ("/about", "0.5", "monthly"),
+        ("/faq", "0.5", "monthly"),
+        ("/privacy", "0.3", "monthly"),
+        ("/terms", "0.3", "monthly"),
+    ];
+
+    for (path, priority, changefreq) in &static_pages {
+        xml.push_str(&format!(
+            r#"
   <url>
-    <loc>{base_url}/</loc>
+    <loc>{base_url}{path}</loc>
     <lastmod>{today}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
+    <changefreq>{changefreq}</changefreq>
+    <priority>{priority}</priority>
   </url>"#
-    ));
+        ));
+    }
 
     // Streamer pages
     for username in &rows {
@@ -62,7 +74,7 @@ pub async fn robots_txt() -> impl IntoResponse {
     let base_url = std::env::var("SITE_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
 
     let body = format!(
-        "User-agent: *\nAllow: /\n\nSitemap: {base_url}/sitemap.xml\n"
+        "User-agent: *\nAllow: /\nDisallow: /dashboard/\nDisallow: /overlay/\nDisallow: /api/\n\nSitemap: {base_url}/sitemap.xml\n"
     );
 
     (

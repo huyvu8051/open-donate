@@ -1,0 +1,9 @@
+target
+.git
+.DS_Store
+**/.DS_Store
+end2end/node_modules
+end2end/test-results
+end2end/playwright-report
+terraform
+

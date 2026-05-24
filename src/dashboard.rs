@@ -12,7 +12,7 @@ pub fn DashboardLayout() -> impl IntoView {
     });
 
     view! {
-        <Transition fallback=move || view! { <div class="p-8 text-center">"Loading Dashboard..."</div> }>
+        <Transition fallback=move || view! { <div class="p-8 text-center">{leptos_fluent::move_tr!("dashboard-loading")}</div> }>
             {move || {
                 onboard_resource.get().map(|res| {
                     match res {
@@ -26,39 +26,39 @@ pub fn DashboardLayout() -> impl IntoView {
                                     // SideNavBar
                                     <aside class="fixed left-0 top-20 h-[calc(100vh-80px)] w-64 bg-surface-container-low/40 backdrop-blur-md border-r border-white/10 hidden md:flex flex-col p-md gap-base z-40">
                                         <div class="mb-lg">
-                                            <h2 class="text-headline-sm font-headline-sm text-primary">"Creator Hub"</h2>
-                                            <p class="text-label-sm font-label-sm text-on-surface-variant">"Manage your Glint account"</p>
+                                            <h2 class="text-headline-sm font-headline-sm text-primary">{leptos_fluent::move_tr!("nav-creator-hub")}</h2>
+                                            <p class="text-label-sm font-label-sm text-on-surface-variant">{leptos_fluent::move_tr!("nav-manage-account")}</p>
                                         </div>
                                         <nav class="flex-1 flex flex-col gap-xs">
                                             <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="/dashboard">
                                                 <span class="material-symbols-outlined">"dashboard"</span>
-                                                <span class="text-label-md font-label-md">"Dashboard"</span>
+                                                <span class="text-label-md font-label-md">{leptos_fluent::move_tr!("nav-dashboard")}</span>
                                             </a>
                                             <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="/dashboard/analytics">
                                                 <span class="material-symbols-outlined">"monitoring"</span>
-                                                <span class="text-label-md font-label-md">"Analytics"</span>
+                                                <span class="text-label-md font-label-md">{leptos_fluent::move_tr!("nav-analytics")}</span>
                                             </a>
                                             <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="/dashboard/payments">
                                                 <span class="material-symbols-outlined">"payments"</span>
-                                                <span class="text-label-md font-label-md">"Payments"</span>
+                                                <span class="text-label-md font-label-md">{leptos_fluent::move_tr!("nav-payments")}</span>
                                             </a>
                                             <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="/dashboard/settings">
                                                 <span class="material-symbols-outlined">"settings"</span>
-                                                <span class="text-label-md font-label-md">"Settings"</span>
+                                                <span class="text-label-md font-label-md">{leptos_fluent::move_tr!("nav-settings")}</span>
                                             </a>
                                         </nav>
                                         <button class="bg-gradient-to-r from-primary-container to-primary text-on-primary-container py-sm rounded-xl font-bold flex items-center justify-center gap-xs active:scale-95 transition-all shadow-lg shadow-primary/20">
                                             <span class="material-symbols-outlined">"videocam"</span>
-                                            <span>"Go Live"</span>
+                                            <span>{leptos_fluent::move_tr!("nav-go-live")}</span>
                                         </button>
                                         <div class="pt-md border-t border-white/10 flex flex-col gap-xs">
                                             <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/30 rounded-xl transition-all" href="#">
                                                 <span class="material-symbols-outlined">"help"</span>
-                                                <span class="text-label-md font-label-md">"Help"</span>
+                                                <span class="text-label-md font-label-md">{leptos_fluent::move_tr!("nav-help")}</span>
                                             </a>
                                             <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/30 rounded-xl transition-all" href="/api/auth/logout">
                                                 <span class="material-symbols-outlined">"logout"</span>
-                                                <span class="text-label-md font-label-md">"Logout"</span>
+                                                <span class="text-label-md font-label-md">{leptos_fluent::move_tr!("nav-logout")}</span>
                                             </a>
                                         </div>
                                     </aside>
@@ -74,22 +74,22 @@ pub fn DashboardLayout() -> impl IntoView {
                                     <nav class="fixed bottom-0 w-full bg-surface-container-low/90 backdrop-blur-xl border-t border-white/10 flex justify-around items-center h-16 z-50 md:hidden pb-safe">
                                         <a href="/dashboard" class="flex flex-col items-center gap-1 text-primary w-16">
                                             <span class="material-symbols-outlined text-[24px]">"dashboard"</span>
-                                            <span class="text-[10px] font-bold leading-none">"Dashboard"</span>
+                                            <span class="text-[10px] font-bold leading-none">{leptos_fluent::move_tr!("nav-dashboard")}</span>
                                         </a>
                                         <a href="/dashboard/analytics" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16">
                                             <span class="material-symbols-outlined text-[24px]">"monitoring"</span>
-                                            <span class="text-[10px] font-medium leading-none">"Analytics"</span>
+                                            <span class="text-[10px] font-medium leading-none">{leptos_fluent::move_tr!("nav-analytics")}</span>
                                         </a>
                                         <button class="relative -top-5 w-12 h-12 bg-gradient-to-tr from-primary to-primary-container rounded-full shadow-lg shadow-primary/30 flex items-center justify-center text-on-primary active:scale-95 transition-transform border-4 border-background">
                                             <span class="material-symbols-outlined text-[24px]">"videocam"</span>
                                         </button>
                                         <a href="/dashboard/payments" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16">
                                             <span class="material-symbols-outlined text-[24px]">"payments"</span>
-                                            <span class="text-[10px] font-medium leading-none">"Payments"</span>
+                                            <span class="text-[10px] font-medium leading-none">{leptos_fluent::move_tr!("nav-payments")}</span>
                                         </a>
                                         <a href="/dashboard/settings" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16">
                                             <span class="material-symbols-outlined text-[24px]">"settings"</span>
-                                            <span class="text-[10px] font-medium leading-none">"Settings"</span>
+                                            <span class="text-[10px] font-medium leading-none">{leptos_fluent::move_tr!("nav-settings")}</span>
                                         </a>
                                     </nav>
 
@@ -117,9 +117,9 @@ pub fn DashboardLayout() -> impl IntoView {
                         },
                         Ok(None) => view! {
                             <div class="p-8 text-center flex flex-col items-center justify-center min-h-[50vh] gap-md">
-                                <p class="text-on-surface-variant text-body-lg">"You must be logged in to access the dashboard."</p>
+                                <p class="text-on-surface-variant text-body-lg">{leptos_fluent::move_tr!("dashboard-must-login")}</p>
                                 <a href="/api/auth/login" class="bg-primary text-on-primary px-xl py-md rounded-xl font-bold hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20">
-                                    "Log In / Register"
+                                    {leptos_fluent::move_tr!("dashboard-login-btn")}
                                 </a>
                             </div>
                         }.into_any(),
@@ -143,9 +143,9 @@ pub fn DashboardHome() -> impl IntoView {
     view! {
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
             <div>
-                <h1 data-testid="streamer-dashboard-header" class="text-headline-lg font-headline-lg text-on-surface">"Streamer Dashboard"</h1>
+                <h1 data-testid="streamer-dashboard-header" class="text-headline-lg font-headline-lg text-on-surface">{leptos_fluent::move_tr!("dashboard-streamer-dashboard")}</h1>
                 <p class="text-body-md font-body-md text-on-surface-variant">
-                    "Welcome back, " {streamer.display_name.clone()} ". Your creator hub is ready."
+                    {leptos_fluent::move_tr!("dashboard-welcome-back")} {streamer.display_name.clone()} {leptos_fluent::move_tr!("dashboard-creator-hub-ready")}
                 </p>
             </div>
             <a
@@ -155,7 +155,7 @@ pub fn DashboardHome() -> impl IntoView {
                 rel="noopener noreferrer"
             >
                 <span class="material-symbols-outlined text-[20px]">"open_in_new"</span>
-                <span>"Open Overlay"</span>
+                <span>{leptos_fluent::move_tr!("dashboard-open-overlay")}</span>
             </a>
         </div>
 
@@ -171,28 +171,28 @@ pub fn SettingsPage() -> impl IntoView {
     
     view! {
         <div class="flex flex-col gap-lg max-w-2xl">
-            <h1 class="text-headline-lg font-headline-lg text-on-surface">"Settings"</h1>
+            <h1 class="text-headline-lg font-headline-lg text-on-surface">{leptos_fluent::move_tr!("settings-title")}</h1>
             <ActionForm action=update_action>
                 <div class="flex flex-col gap-md bg-surface-container-low/40 backdrop-blur-md border border-white/10 rounded-2xl p-lg">
                     <div class="flex flex-col gap-xs">
-                    <label class="text-label-md font-bold text-on-surface">"Streamer Name"</label>
+                    <label class="text-label-md font-bold text-on-surface">{leptos_fluent::move_tr!("settings-streamer-name")}</label>
                     <input type="text" name="new_display_name" data-testid="settings-display-name-input" class="bg-surface-variant/30 border-none rounded-lg px-md py-sm text-on-surface focus:ring-2 focus:ring-primary" value={streamer.display_name.clone()} required />
                 </div>
                 <div class="flex flex-col gap-xs">
-                    <label class="text-label-md font-bold text-on-surface">"Description"</label>
+                    <label class="text-label-md font-bold text-on-surface">{leptos_fluent::move_tr!("settings-description")}</label>
                     <textarea name="new_bio" data-testid="settings-bio-input" class="bg-surface-variant/30 border-none rounded-lg px-md py-sm text-on-surface focus:ring-2 focus:ring-primary h-24" required>{streamer.bio.clone()}</textarea>
                 </div>
                 <div class="flex flex-col gap-xs">
-                    <label class="text-label-md font-bold text-on-surface">"Link ID (Username)"</label>
+                    <label class="text-label-md font-bold text-on-surface">{leptos_fluent::move_tr!("settings-link-id")}</label>
                     <input type="text" name="new_username" data-testid="settings-username-input" class="bg-surface-variant/30 border-none rounded-lg px-md py-sm text-on-surface focus:ring-2 focus:ring-primary" value={streamer.username.clone()} required pattern="^[a-zA-Z0-9_]+$" title="Only letters, numbers, and underscores allowed" />
-                    <span class="text-label-sm text-on-surface-variant">"This is your public profile path: /streamer/YOUR_LINK_ID"</span>
+                    <span class="text-label-sm text-on-surface-variant">{leptos_fluent::move_tr!("settings-public-path")}</span>
                 </div>
                 
                 {streamer.payment_methods.clone().into_iter().map(|pm| view! { <input type="hidden" name="payment_methods[]" value=pm /> }).collect_view()}
                 
                 <Suspense fallback=|| ()>
                     {move || match action_value.get() {
-                        Some(Ok(_)) => view! { <div data-testid="settings-success-message" class="text-secondary font-bold">"Settings updated successfully!"</div> }.into_any(),
+                        Some(Ok(_)) => view! { <div data-testid="settings-success-message" class="text-secondary font-bold">{leptos_fluent::move_tr!("settings-success-msg")}</div> }.into_any(),
                         Some(Err(e)) => view! { <div data-testid="settings-error-message" class="text-error font-bold">{format!("Error: {}", e)}</div> }.into_any(),
                         None => view! {}.into_any()
                     }}
@@ -200,7 +200,7 @@ pub fn SettingsPage() -> impl IntoView {
 
                 <div class="flex justify-end mt-sm">
                     <button type="submit" data-testid="settings-save-button" class="bg-primary text-on-primary font-bold px-lg py-sm rounded-xl hover:brightness-110 active:scale-95 transition-all">
-                        "Save Settings"
+                        {leptos_fluent::move_tr!("settings-btn-save")}
                     </button>
                 </div>
                 </div>
@@ -217,9 +217,9 @@ pub fn PaymentsPage() -> impl IntoView {
 
     view! {
         <div class="mb-lg">
-            <h1 data-testid="streamer-payments-header" class="text-headline-lg font-headline-lg text-on-surface">"Payment Methods"</h1>
+            <h1 data-testid="streamer-payments-header" class="text-headline-lg font-headline-lg text-on-surface">{leptos_fluent::move_tr!("payments-title")}</h1>
             <p class="text-body-md font-body-md text-on-surface-variant">
-                "Configure the payment options your viewers can use to donate."
+                {leptos_fluent::move_tr!("payments-subtitle")}
             </p>
         </div>
 
@@ -231,22 +231,22 @@ pub fn PaymentsPage() -> impl IntoView {
                     <input type="hidden" name="new_username" value={streamer.username.clone()} />
                     
                     <div class="flex flex-col gap-xs">
-                        <label class="text-label-md font-bold text-on-surface">"Supported Methods"</label>
+                        <label class="text-label-md font-bold text-on-surface">{leptos_fluent::move_tr!("payments-supported-methods")}</label>
                         <div class="flex flex-col gap-sm">
                             <label class="flex items-center gap-sm cursor-pointer">
                                 <input type="checkbox" name="payment_methods[]" value="Mock Auto" checked=streamer.payment_methods.contains(&"Mock Auto".to_string()) class="w-5 h-5 accent-primary bg-surface-variant/30 border-none rounded" />
-                                <span class="text-body-md text-on-surface">"Mock Auto"</span>
+                                <span class="text-body-md text-on-surface">{leptos_fluent::move_tr!("payments-mock-auto")}</span>
                             </label>
                             <label class="flex items-center gap-sm cursor-pointer">
                                 <input type="checkbox" name="payment_methods[]" value="Mock Manual" checked=streamer.payment_methods.contains(&"Mock Manual".to_string()) class="w-5 h-5 accent-primary bg-surface-variant/30 border-none rounded" />
-                                <span class="text-body-md text-on-surface">"Mock Manual"</span>
+                                <span class="text-body-md text-on-surface">{leptos_fluent::move_tr!("payments-mock-manual")}</span>
                             </label>
                         </div>
                     </div>
                     
                     <Suspense fallback=|| ()>
                         {move || match action_value.get() {
-                            Some(Ok(_)) => view! { <div data-testid="payments-success-message" class="text-secondary font-bold">"Payment settings updated successfully!"</div> }.into_any(),
+                            Some(Ok(_)) => view! { <div data-testid="payments-success-message" class="text-secondary font-bold">{leptos_fluent::move_tr!("payments-success-msg")}</div> }.into_any(),
                             Some(Err(e)) => view! { <div class="text-error font-bold">{format!("Error: {}", e)}</div> }.into_any(),
                             None => view! {}.into_any()
                         }}
@@ -254,7 +254,7 @@ pub fn PaymentsPage() -> impl IntoView {
 
                     <div class="flex justify-end pt-sm border-t border-white/10">
                         <button type="submit" data-testid="save-payments-btn" class="bg-primary text-on-primary font-bold py-sm px-xl rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20">
-                            "Save Changes"
+                            {leptos_fluent::move_tr!("payments-btn-save")}
                         </button>
                     </div>
                 </div>
@@ -336,8 +336,8 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
         <div class="glass-card p-lg rounded-xl flex flex-col gap-lg mb-lg">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-md">
                 <div>
-                    <h3 class="text-headline-md font-headline-md text-on-surface">"Donation History"</h3>
-                    <p class="text-body-md font-body-md text-on-surface-variant">"Detailed view of your recent contributions"</p>
+                    <h3 class="text-headline-md font-headline-md text-on-surface">{leptos_fluent::move_tr!("dashboard-donation-history")}</h3>
+                    <p class="text-body-md font-body-md text-on-surface-variant">{leptos_fluent::move_tr!("dashboard-donation-history-sub")}</p>
                 </div>
                 
                 <div class="flex flex-wrap gap-sm w-full md:w-auto items-center">
@@ -347,7 +347,7 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
                             prop:checked=move || auto_reload.get()
                             on:change=move |ev| set_auto_reload.set(event_target_checked(&ev))
                         />
-                        "Auto Reload"
+                        {leptos_fluent::move_tr!("dashboard-auto-reload")}
                     </label>
                     <div class="flex items-center gap-2 ml-2">
                         <select 
@@ -365,7 +365,7 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
                         </select>
                     </div>
                     <div class="flex items-center gap-2 ml-4">
-                        <span class="text-label-sm text-on-surface-variant">"Per page:"</span>
+                        <span class="text-label-sm text-on-surface-variant">{leptos_fluent::move_tr!("dashboard-per-page")}</span>
                         <select 
                             class="bg-surface-variant/30 border-none rounded-lg px-2 py-1 text-label-sm text-on-surface focus:ring-1 focus:ring-primary cursor-pointer"
                             on:change=move |ev| {
@@ -388,10 +388,10 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
                 <table class="w-full text-left border-collapse min-w-[700px]">
                     <thead>
                         <tr class="border-b border-white/10 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">
-                            <th class="pb-md pr-md">"Supporter ID"</th>
-                            <th class="pb-md px-md">"Amount"</th>
-                            <th class="pb-md px-md">"Message"</th>
-                            <th class="pb-md pl-md">"Timestamp"</th>
+                            <th class="pb-md pr-md">{leptos_fluent::move_tr!("dashboard-col-donor")}</th>
+                            <th class="pb-md px-md">{leptos_fluent::move_tr!("dashboard-col-amount")}</th>
+                            <th class="pb-md px-md">{leptos_fluent::move_tr!("dashboard-col-message")}</th>
+                            <th class="pb-md pl-md">{leptos_fluent::move_tr!("dashboard-col-time")}</th>
                         </tr>
                     </thead>
                     <tbody class="text-body-md">
@@ -420,7 +420,7 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
                                 tx_resource.get().map(|res| match res {
                                     Ok((txs, _)) => {
                                         if txs.is_empty() {
-                                            view! { <tr><td colspan="4" class="py-md text-center text-on-surface-variant">"No donations yet."</td></tr> }.into_any()
+                                            view! { <tr><td colspan="4" class="py-md text-center text-on-surface-variant">{leptos_fluent::move_tr!("dashboard-no-donations")}</td></tr> }.into_any()
                                         } else {
                                             view! {
                                                 {txs.into_iter().map(|tx| view! {
@@ -443,7 +443,7 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
                                             }.into_any()
                                         }
                                     },
-                                    Err(_) => view! { <tr><td colspan="4" class="py-md text-center text-error">"Error loading donations."</td></tr> }.into_any()
+                                    Err(_) => view! { <tr><td colspan="4" class="py-md text-center text-error">{leptos_fluent::move_tr!("dashboard-donations-error")}</td></tr> }.into_any()
                                 })
                             }}
                         </Suspense>
@@ -453,7 +453,7 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
             
             <div class="flex justify-between items-center pt-md border-t border-white/10">
                 <p class="text-label-sm font-label-sm text-on-surface-variant">
-                    "Showing " {move || start_idx()} " to " {move || end_idx()} " of " {move || total_count()} " donations"
+                    {leptos_fluent::move_tr!("dashboard-showing")} " " {move || start_idx()} " " {leptos_fluent::move_tr!("dashboard-to")} " " {move || end_idx()} " " {leptos_fluent::move_tr!("dashboard-of")} " " {move || total_count()} " " {leptos_fluent::move_tr!("dashboard-donations")}
                 </p>
                 <div class="flex gap-xs">
                     <button
@@ -482,7 +482,7 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
 #[component]
 pub fn AnalyticsPage() -> impl IntoView {
     let streamer = use_context::<crate::db::DbStreamer>().expect("Streamer context missing");
-    let (time_range, set_time_range) = create_signal("week".to_string());
+    let (time_range, set_time_range) = signal("week".to_string());
     
     let analytics_resource = LocalResource::new(move || {
         let streamer_id = streamer.id;
@@ -494,9 +494,9 @@ pub fn AnalyticsPage() -> impl IntoView {
 
     view! {
         <div class="flex flex-col gap-lg mb-xl">
-            <h1 class="text-headline-lg font-headline-lg text-on-surface">"Analytics"</h1>
+            <h1 class="text-headline-lg font-headline-lg text-on-surface">{leptos_fluent::move_tr!("analytics-title")}</h1>
             
-            <Suspense fallback=move || view! { <div class="text-on-surface-variant">"Loading analytics..."</div> }>
+            <Suspense fallback=move || view! { <div class="text-on-surface-variant">{leptos_fluent::move_tr!("analytics-loading")}</div> }>
                 {move || analytics_resource.get().map(|res| match res {
                     Ok(analytics) => view! {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-md mb-lg">
@@ -504,7 +504,7 @@ pub fn AnalyticsPage() -> impl IntoView {
                             <div class="bg-surface-container-low/40 backdrop-blur-md border border-white/10 rounded-2xl p-lg flex flex-col gap-sm">
                                 <h3 class="text-label-md font-bold text-on-surface-variant flex items-center gap-xs">
                                     <span class="material-symbols-outlined text-primary">"account_balance_wallet"</span>
-                                    "Total Revenue"
+                                    {leptos_fluent::move_tr!("analytics-total-revenue")}
                                 </h3>
                                 <p class="text-display-md font-display-md text-primary font-bold">
                                     {format!("${:.2}", analytics.total_revenue)}
@@ -514,7 +514,7 @@ pub fn AnalyticsPage() -> impl IntoView {
                             <div class="bg-surface-container-low/40 backdrop-blur-md border border-white/10 rounded-2xl p-lg flex flex-col gap-sm">
                                 <h3 class="text-label-md font-bold text-on-surface-variant flex items-center gap-xs">
                                     <span class="material-symbols-outlined text-secondary">"favorite"</span>
-                                    "Total Donations"
+                                    {leptos_fluent::move_tr!("analytics-total-donations")}
                                 </h3>
                                 <p class="text-display-md font-display-md text-secondary font-bold">
                                     {analytics.donation_count}
@@ -527,7 +527,7 @@ pub fn AnalyticsPage() -> impl IntoView {
                             <div class="flex items-center justify-between gap-sm mb-xs">
                                 <h3 class="text-title-lg font-title-lg text-on-surface flex items-center gap-sm">
                                     <span class="material-symbols-outlined text-primary">"bar_chart"</span>
-                                    "Revenue Over Time"
+                                    {leptos_fluent::move_tr!("analytics-revenue-over-time")}
                                 </h3>
                                 
                                 <div class="flex bg-surface-variant/50 p-1 rounded-lg">
@@ -555,7 +555,7 @@ pub fn AnalyticsPage() -> impl IntoView {
 
                             {
                                 if analytics.revenue_over_time.is_empty() {
-                                    view! { <p class="text-body-md text-on-surface-variant">"No revenue data for this period."</p> }.into_any()
+                                    view! { <p class="text-body-md text-on-surface-variant">{leptos_fluent::move_tr!("analytics-no-revenue")}</p> }.into_any()
                                 } else {
                                     let max_rev = analytics.revenue_over_time.iter().map(|(_, r)| *r).fold(0.0_f64, f64::max);
                                     let max_rev = if max_rev == 0.0 { 1.0 } else { max_rev };
@@ -592,12 +592,12 @@ pub fn AnalyticsPage() -> impl IntoView {
                         <div class="bg-surface-container-low/40 backdrop-blur-md border border-white/10 rounded-2xl p-lg flex flex-col gap-md">
                             <h3 class="text-title-lg font-title-lg text-on-surface flex items-center gap-sm">
                                 <span class="material-symbols-outlined text-tertiary">"emoji_events"</span>
-                                "Top Donors"
+                                {leptos_fluent::move_tr!("analytics-top-donors")}
                             </h3>
                             {
                                 if analytics.top_donors.is_empty() {
                                     view! {
-                                        <p class="text-body-md text-on-surface-variant">"No donations yet."</p>
+                                        <p class="text-body-md text-on-surface-variant">{leptos_fluent::move_tr!("analytics-no-donations")}</p>
                                     }.into_any()
                                 } else {
                                     let donors_view = analytics.top_donors.into_iter().enumerate().map(|(i, (name, amount))| {

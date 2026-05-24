@@ -6,6 +6,7 @@ pub mod auth;
 pub mod db;
 pub mod dashboard;
 pub mod overlay;
+pub mod pages;
 
 #[cfg(feature = "ssr")]
 pub mod sitemap;

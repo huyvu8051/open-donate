@@ -89,6 +89,10 @@ pub fn App() -> impl IntoView {
                     <Route path=StaticSegment("") view=LandingPage/>
                     <Route path=StaticSegment("explore") view=ExplorePage/>
                     <Route path=StaticSegment("leaderboard") view=LeaderboardPage/>
+                    <Route path=StaticSegment("about") view=crate::pages::AboutPage/>
+                    <Route path=StaticSegment("faq") view=crate::pages::FaqPage/>
+                    <Route path=StaticSegment("privacy") view=crate::pages::PrivacyPage/>
+                    <Route path=StaticSegment("terms") view=crate::pages::TermsPage/>
                     <ParentRoute path=StaticSegment("dashboard") view=crate::dashboard::DashboardLayout>
                         <Route path=StaticSegment("") view=crate::dashboard::DashboardHome/>
                         <Route path=StaticSegment("settings") view=crate::dashboard::SettingsPage/>
@@ -224,15 +228,15 @@ pub fn Footer() -> impl IntoView {
         <footer class="bg-surface-dim border-t border-surface-container-highest w-full py-lg mt-auto">
             <div class="max-w-7xl mx-auto px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-md">
                 <div class="flex flex-col items-center md:items-start gap-xs">
-                    <span class="text-headline-md font-headline-md font-bold text-primary">"Glint"</span>
-                    <p class="text-on-surface-variant text-body-md font-body-md">"© 2024 Glint Technologies. Optimism in every transaction."</p>
+                    <a href="/" class="text-headline-md font-headline-md font-bold text-primary hover:text-primary/80 transition-colors">"Glint"</a>
+                    <p class="text-on-surface-variant text-body-md font-body-md">{leptos_fluent::move_tr!("footer-copyright")}</p>
                 </div>
                 <nav class="flex flex-wrap justify-center gap-md">
-                    <a class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors" href="#">"Support"</a>
-                    <a class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors" href="#">"Privacy Policy"</a>
-                    <a class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors" href="#">"Terms of Service"</a>
-                    <a class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors" href="#">"Discord"</a>
-                    <a class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors" href="#">"Instagram"</a>
+                    <a class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors" href="/about">{leptos_fluent::move_tr!("footer-about")}</a>
+                    <a class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors" href="/faq">{leptos_fluent::move_tr!("footer-faq")}</a>
+                    <a class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors" href="/privacy">{leptos_fluent::move_tr!("footer-privacy")}</a>
+                    <a class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors" href="/terms">{leptos_fluent::move_tr!("footer-terms")}</a>
+                    <a class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors" href="#">{leptos_fluent::move_tr!("footer-discord")}</a>
                 </nav>
             </div>
         </footer>
@@ -252,8 +256,8 @@ pub fn Hero() -> impl IntoView {
                 <h1 class="text-headline-xl-mobile md:text-headline-xl font-headline-xl text-on-surface">
                     {leptos_fluent::move_tr!("landing-title-start")} <span class="text-primary italic">{leptos_fluent::move_tr!("landing-title-glint")}</span> {leptos_fluent::move_tr!("landing-title-end")}
                 </h1>
-                <p class="text-body-lg font-body-lg text-on-surface-variant max-w-2xl mx-auto">
-                    {leptos_fluent::move_tr!("landing-subtitle")}
+                <p class="text-body-lg font-body-lg text-on-surface-variant/80 max-w-lg mx-auto italic">
+                    {leptos_fluent::move_tr!("landing-trusted-by")}
                 </p>
                 <div class="flex flex-col md:flex-row items-center justify-center gap-md pt-base">
                     <button class="px-lg py-md bg-secondary text-on-secondary-container rounded-xl font-headline-md text-headline-md neon-glow-secondary hover:scale-105 transition-transform active:scale-95 duration-150">
@@ -264,22 +268,18 @@ pub fn Hero() -> impl IntoView {
                     </button>
                 </div>
             </div>
-            <div class="mt-xl grid grid-cols-2 md:grid-cols-4 gap-md w-full max-w-5xl">
-                <div class="p-md rounded-xl bg-surface-container-low/40 backdrop-blur-md border border-white/5">
-                    <p class="text-primary text-headline-md font-headline-md">"$2.4M"</p>
-                    <p class="text-on-surface-variant text-label-sm font-label-sm">"Total Distributed"</p>
+            <div class="mt-xl grid grid-cols-1 md:grid-cols-3 gap-md w-full max-w-5xl">
+                <div class="glass-card flex-1 min-w-[200px] p-lg md:p-xl rounded-2xl flex flex-col items-center justify-center gap-xs">
+                    <span class="text-display-sm md:text-display-md font-display-md font-bold text-primary">"10K+"</span>
+                    <span class="text-label-md md:text-label-lg font-label-lg text-on-surface-variant font-medium tracking-wide uppercase">{leptos_fluent::move_tr!("landing-active-creators")}</span>
                 </div>
-                <div class="p-md rounded-xl bg-surface-container-low/40 backdrop-blur-md border border-white/5">
-                    <p class="text-secondary text-headline-md font-headline-md">"150K+"</p>
-                    <p class="text-on-surface-variant text-label-sm font-label-sm">"Active Creators"</p>
+                <div class="glass-card flex-1 min-w-[200px] p-lg md:p-xl rounded-2xl flex flex-col items-center justify-center gap-xs">
+                    <span class="text-display-sm md:text-display-md font-display-md font-bold text-secondary">"2M+"</span>
+                    <span class="text-label-md md:text-label-lg font-label-lg text-on-surface-variant font-medium tracking-wide uppercase">{leptos_fluent::move_tr!("landing-live-viewers")}</span>
                 </div>
-                <div class="p-md rounded-xl bg-surface-container-low/40 backdrop-blur-md border border-white/5">
-                    <p class="text-tertiary text-headline-md font-headline-md">"0.2s"</p>
-                    <p class="text-on-surface-variant text-label-sm font-label-sm">"Avg. Payout Time"</p>
-                </div>
-                <div class="p-md rounded-xl bg-surface-container-low/40 backdrop-blur-md border border-white/5">
-                    <p class="text-on-surface text-headline-md font-headline-md">"99.9%"</p>
-                    <p class="text-on-surface-variant text-label-sm font-label-sm">"Transparency Score"</p>
+                <div class="glass-card flex-1 min-w-[200px] p-lg md:p-xl rounded-2xl flex flex-col items-center justify-center gap-xs">
+                    <span class="text-display-sm md:text-display-md font-display-md font-bold text-tertiary">"50M+"</span>
+                    <span class="text-label-md md:text-label-lg font-label-lg text-on-surface-variant font-medium tracking-wide uppercase">{leptos_fluent::move_tr!("landing-total-glints")}</span>
                 </div>
             </div>
         </section>
@@ -296,10 +296,10 @@ pub fn ExplorePage() -> impl IntoView {
             <div class="max-w-7xl mx-auto flex flex-col gap-xl">
                 <div class="flex flex-col gap-xs text-center">
                     <h1 class="text-display-sm md:text-display-md font-display-md font-extrabold text-on-surface tracking-tight">
-                        "Explore Creators"
+                        {leptos_fluent::move_tr!("explore-title")}
                     </h1>
                     <p class="text-headline-sm font-headline-sm text-on-surface-variant max-w-2xl mx-auto">
-                        "Discover and support your favorite live streamers."
+                        {leptos_fluent::move_tr!("explore-subtitle")}
                     </p>
                 </div>
 
@@ -327,11 +327,15 @@ pub fn ExplorePage() -> impl IntoView {
                                                                 {if s.is_live {
                                                                     view! {
                                                                         <div class="absolute -bottom-1 -right-1 bg-error text-on-error text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-surface animate-pulse">
-                                                                            "LIVE"
+                                                                            {leptos_fluent::move_tr!("explore-live")}
                                                                         </div>
                                                                     }.into_any()
                                                                 } else {
-                                                                    view! {}.into_any()
+                                                                    view! {
+                                                                        <div class="absolute -bottom-1 -right-1 bg-surface-variant text-on-surface-variant text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-surface">
+                                                                            {leptos_fluent::move_tr!("explore-offline")}
+                                                                        </div>
+                                                                    }.into_any()
                                                                 }}
                                                             </div>
                                                             <div class="flex flex-col overflow-hidden">
@@ -347,7 +351,7 @@ pub fn ExplorePage() -> impl IntoView {
                                                             {s.bio.clone()}
                                                         </p>
                                                         <div class="mt-auto pt-sm flex justify-end">
-                                                            <span class="text-primary text-label-md font-label-md font-bold group-hover:underline">"View Profile →"</span>
+                                                            <span class="text-primary text-label-md font-label-md font-bold group-hover:underline">{leptos_fluent::move_tr!("explore-view-profile")} " →"</span>
                                                         </div>
                                                     </a>
                                                 }
@@ -357,7 +361,7 @@ pub fn ExplorePage() -> impl IntoView {
                                 }
                             }
                             Err(_) => view! {
-                                <div class="text-center text-error mt-xl">"Failed to load streamers."</div>
+                                <div class="text-center text-error mt-xl">{leptos_fluent::move_tr!("explore-error")}</div>
                             }.into_any()
                         })
                     }}
@@ -541,29 +545,29 @@ pub fn LandingPage() -> impl IntoView {
             
             // How it works
             <section class="py-xl px-margin-mobile md:px-margin-desktop max-w-7xl mx-auto text-center">
-                <h2 class="text-headline-lg font-headline-lg text-on-surface mb-xl">"How it Works"</h2>
+                <h2 class="text-headline-lg font-headline-lg text-on-surface mb-xl">{leptos_fluent::move_tr!("landing-how-it-works")}</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-lg relative">
                     <div class="hidden md:block absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-y-1/2 z-0"></div>
                     <div class="relative z-10 group">
                         <div class="w-16 h-16 bg-surface-container-highest rounded-full flex items-center justify-center mx-auto border-2 border-primary neon-glow-primary mb-md group-hover:scale-110 transition-transform">
                             <span class="text-headline-md font-headline-md text-primary">"1"</span>
                         </div>
-                        <h4 class="text-headline-md font-headline-md text-on-surface">"Connect Account"</h4>
-                        <p class="text-on-surface-variant mt-sm">"Link your existing streaming or social profile in seconds with our secure API."</p>
+                        <h4 class="text-headline-md font-headline-md text-on-surface">{leptos_fluent::move_tr!("how-step1-title")}</h4>
+                        <p class="text-on-surface-variant mt-sm">{leptos_fluent::move_tr!("how-step1-desc")}</p>
                     </div>
                     <div class="relative z-10 group">
                         <div class="w-16 h-16 bg-surface-container-highest rounded-full flex items-center justify-center mx-auto border-2 border-secondary neon-glow-secondary mb-md group-hover:scale-110 transition-transform">
                             <span class="text-headline-md font-headline-md text-secondary">"2"</span>
                         </div>
-                        <h4 class="text-headline-md font-headline-md text-on-surface">"Customize Experience"</h4>
-                        <p class="text-on-surface-variant mt-sm">"Set up your Glint alerts, donation tiers, and loyalty milestones to match your brand."</p>
+                        <h4 class="text-headline-md font-headline-md text-on-surface">{leptos_fluent::move_tr!("how-step2-title")}</h4>
+                        <p class="text-on-surface-variant mt-sm">{leptos_fluent::move_tr!("how-step2-desc")}</p>
                     </div>
                     <div class="relative z-10 group">
                         <div class="w-16 h-16 bg-surface-container-highest rounded-full flex items-center justify-center mx-auto border-2 border-tertiary mb-md group-hover:scale-110 transition-transform">
                             <span class="text-headline-md font-headline-md text-tertiary">"3"</span>
                         </div>
-                        <h4 class="text-headline-md font-headline-md text-on-surface">"Receive & Payout"</h4>
-                        <p class="text-on-surface-variant mt-sm">"Watch the Glints roll in and withdraw your funds to your preferred method instantly."</p>
+                        <h4 class="text-headline-md font-headline-md text-on-surface">{leptos_fluent::move_tr!("how-step3-title")}</h4>
+                        <p class="text-on-surface-variant mt-sm">{leptos_fluent::move_tr!("how-step3-desc")}</p>
                     </div>
                 </div>
             </section>
@@ -571,14 +575,14 @@ pub fn LandingPage() -> impl IntoView {
             // CTA Section
             <section class="py-xl px-margin-mobile md:px-margin-desktop text-center">
                 <div class="max-w-4xl mx-auto bg-gradient-to-br from-primary/10 to-secondary/10 backdrop-blur-xl p-xl rounded-[2rem] border border-white/10">
-                    <h2 class="text-headline-lg md:text-headline-xl font-headline-xl text-on-surface mb-md">"Ready to join the revolution?"</h2>
-                    <p class="text-body-lg text-on-surface-variant mb-lg">"Join 150,000+ creators who are already using Glint to power their communities."</p>
+                    <h2 class="text-headline-lg md:text-headline-xl font-headline-xl text-on-surface mb-md">{leptos_fluent::move_tr!("cta-title")}</h2>
+                    <p class="text-body-lg text-on-surface-variant mb-lg">{leptos_fluent::move_tr!("cta-subtitle")}</p>
                     <div class="flex flex-col sm:flex-row items-center justify-center gap-md">
                         <button class="w-full sm:w-auto px-lg py-md bg-secondary text-on-secondary-container rounded-xl font-headline-md text-headline-md neon-glow-secondary hover:scale-105 transition-transform pulse-accent">
-                            "Donate Now"
+                            {leptos_fluent::move_tr!("cta-donate-now")}
                         </button>
                         <button class="w-full sm:w-auto px-lg py-md bg-surface text-on-surface border border-white/20 rounded-xl font-headline-md text-headline-md hover:bg-surface-container-highest transition-colors">
-                            "View Leaders"
+                            {leptos_fluent::move_tr!("cta-view-leaders")}
                         </button>
                     </div>
                 </div>
@@ -759,11 +763,13 @@ pub fn StreamerPage() -> impl IntoView {
             }}
         </Suspense>
         <Header/>
-        <main class="pt-24 pb-lg px-margin-mobile md:px-margin-desktop max-w-4xl mx-auto flex-1 w-full flex flex-col gap-lg animate-fade-in">
+        <main class="pt-24 pb-xl px-margin-mobile md:px-margin-desktop max-w-5xl mx-auto flex-1 w-full flex flex-col gap-md animate-fade-in relative">
+            <div aria-hidden="true" class="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-gradient-to-br from-primary/30 via-secondary/10 to-transparent blur-3xl"></div>
+            <div aria-hidden="true" class="pointer-events-none absolute -top-16 -right-20 h-72 w-72 rounded-full bg-gradient-to-br from-secondary/25 via-primary/10 to-transparent blur-3xl"></div>
             // Streamer Profile Header
             <Suspense fallback=move || view! {
-                <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md mb-lg relative overflow-hidden flex flex-col md:flex-row gap-md items-center md:items-end min-h-[180px] animate-pulse">
-                    <div class="w-32 h-32 md:w-40 md:h-40 rounded-2xl bg-white/5 border border-white/10"></div>
+                <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-md mb-md relative overflow-hidden flex flex-col md:flex-row gap-md items-center md:items-center min-h-[140px] animate-pulse shadow-[0_20px_60px_rgba(0,0,0,0.25)] ring-1 ring-white/5">
+                    <div class="w-24 h-24 md:w-28 md:h-28 rounded-2xl bg-white/5 border border-white/10"></div>
                     <div class="flex-1 flex flex-col gap-xs text-center md:text-left">
                         <div class="h-8 w-48 bg-white/5 rounded mx-auto md:mx-0"></div>
                         <div class="h-4 w-full bg-white/5 rounded mt-sm"></div>
@@ -779,14 +785,14 @@ pub fn StreamerPage() -> impl IntoView {
                                 let bio = streamer.bio.clone();
                                 let is_live = streamer.is_live;
                                 view! {
-                                    <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md mb-lg relative overflow-hidden flex flex-col md:flex-row gap-md items-center md:items-end">
-                                        <div class="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
-                                        <div class="relative w-32 h-32 md:w-40 md:h-40 rounded-2xl overflow-hidden border-2 border-secondary shadow-[0_0_20px_rgba(77,224,130,0.3)]">
+                                    <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-md mb-md relative overflow-hidden flex flex-col md:flex-row gap-md items-center md:items-center shadow-[0_20px_60px_rgba(0,0,0,0.25)] ring-1 ring-white/5">
+                                        <div class="absolute inset-0 opacity-70 bg-gradient-to-br from-white/12 via-transparent to-transparent"></div>
+                                        <div class="relative w-24 h-24 md:w-28 md:h-28 rounded-2xl overflow-hidden border border-white/15 shadow-[0_0_0_6px_rgba(255,255,255,0.03)]">
                                             <img alt="Streamer Avatar" class="w-full h-full object-cover" src=avatar/>
                                         </div>
                                         <div class="flex-1 flex flex-col gap-xs text-center md:text-left relative z-10">
                                             <div class="flex items-center justify-center md:justify-start gap-sm">
-                                                <h1 class="text-headline-lg font-headline-lg text-on-surface">{name}</h1>
+                                                <h1 class="text-headline-md md:text-headline-lg font-headline-lg text-on-surface">{name}</h1>
                                                 {if is_live {
                                                     view! {
                                                         <span class="bg-secondary/10 text-secondary border border-secondary/20 px-sm py-xs rounded-full text-label-sm font-label-sm flex items-center gap-xs">
@@ -802,13 +808,27 @@ pub fn StreamerPage() -> impl IntoView {
                                                     }.into_any()
                                                 }}
                                             </div>
-                                            <p class="text-on-surface-variant text-body-md font-body-md max-w-[600px] mx-auto md:mx-0">{bio}</p>
+                                            <p class="text-on-surface-variant text-body-sm md:text-body-md font-body-md leading-snug max-w-prose mx-auto md:mx-0">{bio}</p>
+                                            <div class="flex items-center justify-center md:justify-start gap-sm text-label-sm text-on-surface-variant/90">
+                                                <span class="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-sm py-xs">
+                                                    <span class="material-symbols-outlined text-primary text-[18px]">"bolt"</span>
+                                                    "Fast"
+                                                </span>
+                                                <span class="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-sm py-xs">
+                                                    <span class="material-symbols-outlined text-primary text-[18px]">"lock"</span>
+                                                    "Secure"
+                                                </span>
+                                                <span class="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-sm py-xs">
+                                                    <span class="material-symbols-outlined text-primary text-[18px]">"favorite"</span>
+                                                    "Support"
+                                                </span>
+                                            </div>
                                         </div>
                                     </section>
                                   }.into_any()
                               }
                               _ => view! {
-                                  <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md mb-lg text-center text-on-surface-variant">
+                                  <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-md mb-md text-center text-on-surface-variant">
                                       "Streamer profile not found in database."
                                   </section>
                               }.into_any()
@@ -817,20 +837,20 @@ pub fn StreamerPage() -> impl IntoView {
                   }}
               </Suspense>
 
-              // Donation Form
-              <div class="flex flex-col gap-gutter">
-                  <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md md:p-xl flex flex-col gap-md">
+              <div class="grid grid-cols-1 md:grid-cols-5 gap-md items-start relative z-10">
+                  // Donation Form
+                  <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-md md:p-lg flex flex-col gap-md md:col-span-3 shadow-[0_20px_60px_rgba(0,0,0,0.25)] ring-1 ring-white/5">
                       <div class="flex items-center gap-sm">
                           <span class="material-symbols-outlined text-secondary" data-icon="volunteer_activism">"volunteer_activism"</span>
-                          <h2 class="text-headline-md font-headline-md text-on-surface">{leptos_fluent::move_tr!("donate-send-a-glint")}</h2>
+                          <h2 class="text-headline-sm md:text-headline-md font-headline-md text-on-surface">{leptos_fluent::move_tr!("donate-send-a-glint")}</h2>
                       </div>
 
                       // Your Name Input
-                      <div class="flex flex-col gap-base">
+                      <div class="flex flex-col gap-xs">
                           <label class="text-label-md font-label-md text-on-surface-variant">{leptos_fluent::move_tr!("donate-your-name")}</label>
-                          <input 
+                          <input
                               data-testid="donor-name-input"
-                              class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl px-md py-md text-body-md font-body-md focus:outline-none focus:border-primary transition-all text-on-surface" 
+                              class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl px-md py-sm text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
                               placeholder=move || leptos_fluent::tr!("donate-your-name-placeholder")
                               type="text"
                               prop:value=move || donor_name.get()
@@ -839,20 +859,20 @@ pub fn StreamerPage() -> impl IntoView {
                       </div>
 
                       // Amount Selection
-                      <div class="flex flex-col gap-base">
+                      <div class="flex flex-col gap-xs">
                           <label class="text-label-md font-label-md text-on-surface-variant">{leptos_fluent::move_tr!("donate-amount")}</label>
-                          <div class="grid grid-cols-2 md:grid-cols-4 gap-base">
+                          <div class="grid grid-cols-2 md:grid-cols-4 gap-sm">
                               {
                                   let amounts = vec!["5", "10", "25", "50"];
                                   amounts.into_iter().map(|amt| {
                                       let amt_clone = amt.to_string();
                                       view! {
-                                          <button 
+                                          <button
                                               class=move || {
                                                   if amount.get() == amt_clone {
-                                                      "bg-white/5 backdrop-blur-md border-2 p-md rounded-xl text-headline-md font-headline-md text-on-surface transition-all border-secondary shadow-[inset_0_0_15px_rgba(77,224,130,0.1)]".to_string()
+                                                      "bg-white/5 backdrop-blur-md border-2 px-md py-sm rounded-xl text-body-md font-semibold text-on-surface transition-all border-secondary shadow-[inset_0_0_15px_rgba(77,224,130,0.12)] hover:-translate-y-[1px]".to_string()
                                                   } else {
-                                                      "bg-white/5 backdrop-blur-md border border-white/10 p-md rounded-xl text-headline-md font-headline-md text-on-surface hover:border-secondary transition-all".to_string()
+                                                      "bg-white/5 backdrop-blur-md border border-white/10 px-md py-sm rounded-xl text-body-md font-semibold text-on-surface hover:border-secondary transition-all hover:-translate-y-[1px]".to_string()
                                                   }
                                               }
                                               on:click=move |_| amount.set(amt.to_string())
@@ -863,10 +883,10 @@ pub fn StreamerPage() -> impl IntoView {
                                   }).collect_view()
                               }
                           </div>
-                          <div class="relative mt-base">
+                          <div class="relative mt-sm">
                               <span class="absolute left-md top-1/2 -translate-y-1/2 text-on-surface-variant">"$"</span>
-                              <input 
-                                  class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl px-xl py-md text-body-lg font-body-lg focus:outline-none focus:border-primary transition-all text-on-surface" 
+                              <input
+                                  class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl pl-xl pr-md py-sm text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
                                   placeholder="Custom Amount" 
                                   type="number"
                                   prop:value=move || amount.get()
@@ -876,11 +896,11 @@ pub fn StreamerPage() -> impl IntoView {
                       </div>
 
                       // Your Message
-                      <div class="flex flex-col gap-base">
+                      <div class="flex flex-col gap-xs">
                           <label class="text-label-md font-label-md text-on-surface-variant">{leptos_fluent::move_tr!("donate-message")}</label>
-                          <textarea 
+                          <textarea
                               data-testid="donation-message-input"
-                              class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl px-md py-md text-body-md font-body-md focus:outline-none focus:border-primary transition-all min-h-[120px] resize-none text-on-surface" 
+                              class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl px-md py-sm text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all min-h-[96px] resize-none text-on-surface"
                               placeholder=move || leptos_fluent::tr!("donate-message-placeholder")
                               prop:value=move || message.get()
                               on:input=move |ev| message.set(event_target_value(&ev))
@@ -888,9 +908,9 @@ pub fn StreamerPage() -> impl IntoView {
                       </div>
 
                       // Payment Method
-                      <div class="flex flex-col gap-base">
+                      <div class="flex flex-col gap-xs">
                           <label class="text-label-md font-label-md text-on-surface-variant">{leptos_fluent::move_tr!("donate-payment-method")}</label>
-                          <div class="grid grid-cols-2 sm:grid-cols-3 gap-base">
+                          <div class="grid grid-cols-2 sm:grid-cols-3 gap-sm">
                               <Suspense fallback=move || view! { <span class="text-on-surface-variant">"Loading methods..."</span> }>
                                   {move || {
                                       match streamer_resource.get() {
@@ -906,8 +926,8 @@ pub fn StreamerPage() -> impl IntoView {
                                                       view! {
                                                           <label class="cursor-pointer" on:click=move |_| payment_method.set(pm_clone.clone())>
                                                               <input checked=move || payment_method.get() == pm_clone2 class="hidden peer" name="payment" type="radio"/>
-                                                              <div class="flex flex-col items-center justify-center bg-white/5 backdrop-blur-md p-sm rounded-xl text-center border border-white/10 peer-checked:border-primary peer-checked:bg-primary/5 transition-all">
-                                                                  <span class="material-symbols-outlined text-primary mb-xs">{icon}</span>
+                                                              <div class="flex items-center justify-center gap-xs bg-white/5 backdrop-blur-md px-sm py-sm rounded-xl text-center border border-white/10 peer-checked:border-primary peer-checked:bg-primary/5 transition-all hover:-translate-y-[1px] hover:border-white/20">
+                                                                  <span class="material-symbols-outlined text-primary text-[18px]">{icon}</span>
                                                                   <span class="text-label-sm font-label-sm">{pm}</span>
                                                               </div>
                                                           </label>
@@ -923,16 +943,16 @@ pub fn StreamerPage() -> impl IntoView {
                       </div>
 
                       // Donate Now Button
-                      <button 
+                      <button
                           data-testid="donate-submit-btn"
-                          class="bg-secondary-container text-on-secondary-container py-md rounded-xl text-headline-md font-headline-md hover:shadow-[0_0_30px_rgba(0,181,93,0.3)] transition-all mt-base active:scale-[0.98]"
+                          class="bg-gradient-to-r from-secondary to-secondary-container text-on-secondary-container py-sm rounded-xl text-body-lg font-bold shadow-[0_18px_50px_rgba(0,181,93,0.20)] hover:shadow-[0_18px_60px_rgba(0,181,93,0.30)] transition-all mt-sm active:scale-[0.98] hover:-translate-y-[1px]"
                           on:click=handle_submit
                       >
-                          "Donate Now"
+                          {leptos_fluent::move_tr!("landing-donate-now")}
                       </button>
                       {move || {
                           form_error.get().map(|err| view! {
-                              <div class="mt-base bg-error-container/20 border border-error/30 text-error rounded-xl px-md py-sm text-body-sm">
+                              <div class="mt-sm bg-error-container/20 border border-error/30 text-error rounded-xl px-md py-sm text-body-sm">
                                   {err}
                               </div>
                           })
@@ -941,11 +961,11 @@ pub fn StreamerPage() -> impl IntoView {
                       {move || if show_payment_window.get() {
                           let status = mock_tx_status.get();
                           view! {
-                              <div class="mt-base bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md flex flex-col gap-base">
+                              <div class="mt-sm bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md flex flex-col gap-base">
                                   <div class="flex items-center justify-between">
-                                      <div class="text-on-surface font-semibold">"Mock payment (test)"</div>
+                                      <div class="text-on-surface font-semibold">{leptos_fluent::move_tr!("streamer-mock-payment-required")}</div>
                                       <div class="text-label-sm text-on-surface-variant">
-                                          "Status: " <span class="text-on-surface">{status.clone()}</span>
+                                          {leptos_fluent::move_tr!("streamer-status-label")} " " <span class="text-on-surface">{status.clone()}</span>
                                       </div>
                                   </div>
 
@@ -985,13 +1005,13 @@ pub fn StreamerPage() -> impl IntoView {
                                   {move || if status == "READY_FOR_DISPLAY" {
                                       view! {
                                           <div data-testid="payment-success-msg" class="bg-secondary/10 border border-secondary/20 text-secondary rounded-xl px-md py-sm">
-                                              "Payment success (mock)"
+                                              {leptos_fluent::move_tr!("streamer-payment-success")}
                                           </div>
                                       }.into_any()
                                   } else if status == "REJECTED" {
                                       view! {
                                           <div class="bg-error/10 border border-error/20 text-error rounded-xl px-md py-sm">
-                                              "Payment rejected."
+                                              {leptos_fluent::move_tr!("streamer-payment-failed")}
                                           </div>
                                       }.into_any()
                                   } else {
@@ -1007,7 +1027,7 @@ pub fn StreamerPage() -> impl IntoView {
                                                               transactions_trigger.update(|n| *n += 1);
                                                           }
                                                       }
-                                                  >"Accept"</button>
+                                                  >{leptos_fluent::move_tr!("streamer-btn-accept")}</button>
                                                   <button
                                                       class="flex-1 bg-error text-on-error py-sm rounded-lg font-bold hover:brightness-110"
                                                       on:click=move |_| {
@@ -1016,13 +1036,13 @@ pub fn StreamerPage() -> impl IntoView {
                                                               mock_tx_status.set("REJECTED".to_string());
                                                           }
                                                       }
-                                                  >"Reject"</button>
+                                                  >{leptos_fluent::move_tr!("streamer-btn-reject")}</button>
                                               </div>
                                           }.into_any()
                                       } else {
                                           view! {
                                               <div class="text-on-surface-variant text-body-sm">
-                                                  "Waiting for payment to be ready..."
+                                                  {leptos_fluent::move_tr!("streamer-waiting-payment")}
                                               </div>
                                           }.into_any()
                                       }
@@ -1032,63 +1052,70 @@ pub fn StreamerPage() -> impl IntoView {
                       } else {
                           view! {}.into_any()
                       }}
-                      <p class="text-center text-label-sm font-label-sm text-on-surface-variant">"Glint matches 5% of all stream donations today."</p>
+                      <p class="text-center text-label-sm font-label-sm text-on-surface-variant">{leptos_fluent::move_tr!("streamer-glint-matches")}</p>
                   </section>
-              </div>
 
-              // Recent Tributes Section
-              <section data-testid="recent-tributes-section" class="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md md:p-xl flex flex-col gap-md">
+                  // Recent Tributes Section
+                  <section data-testid="recent-tributes-section" class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-md md:p-lg flex flex-col gap-md md:col-span-2 md:sticky md:top-28 shadow-[0_20px_60px_rgba(0,0,0,0.25)] ring-1 ring-white/5">
                   <div class="flex items-center gap-sm">
                       <span class="material-symbols-outlined text-primary" data-icon="history">"history"</span>
-                      <h2 class="text-headline-md font-headline-md text-on-surface">"Recent Tributes"</h2>
+                      <h2 class="text-headline-sm md:text-headline-md font-headline-md text-on-surface">{leptos_fluent::move_tr!("streamer-recent-tributes")}</h2>
                   </div>
                   
-                  <Suspense fallback=move || view! { <div class="text-on-surface-variant">"Loading recent tributes..."</div> }>
+                  <Suspense fallback=move || view! { <div class="text-on-surface-variant">{leptos_fluent::move_tr!("streamer-loading-tributes")}</div> }>
                       {move || {
                           transactions_resource.get().map(|res| {
                               match res {
                                   Ok(txs) => {
                                       if txs.is_empty() {
                                           view! {
-                                              <p class="text-on-surface-variant text-center py-md">"No tributes yet. Be the first to send a Glint!"</p>
+                                              <p class="text-on-surface-variant text-center py-md">{leptos_fluent::move_tr!("streamer-no-tributes")}</p>
                                           }.into_any()
                                       } else {
                                           view! {
-                                              <div class="flex flex-col gap-base">
+                                              <div class="flex flex-col gap-sm">
                                                   {txs.into_iter().map(|tx| {
                                                       let msg = tx.message.clone();
                                                       view! {
-                                                          <div class="bg-white/5 border border-white/10 rounded-xl p-base flex flex-col gap-xs transition-all hover:bg-white/10">
-                                                              <div class="flex justify-between items-center">
-                                                                  <span class="text-on-surface font-semibold text-body-md">{tx.donor_name.clone()}</span>
-                                                                  <span class="text-secondary font-bold text-headline-sm">"$" {format!("{:.2}", tx.amount)}</span>
-                                                                </div>
-                                                                {if let Some(msg_str) = msg {
-                                                                    view! {
-                                                                        <p class="text-on-surface-variant text-body-sm italic bg-surface-container-low/40 border border-white/5 rounded-lg p-sm mt-xs">
-                                                                            "\"" {msg_str} "\""
-                                                                        </p>
-                                                                    }.into_any()
-                                                                } else {
-                                                                    view! {}.into_any()
-                                                                }}
-                                                                <div class="flex justify-between items-center text-label-sm text-on-surface-variant/80 mt-xs">
-                                                                    <span>"via " {tx.payment_method.clone()}</span>
-                                                                    <span>{tx.created_at.clone()}</span>
-                                                                </div>
-                                                            </div>
+                                                          <div class="bg-white/5 border border-white/10 rounded-xl p-sm flex flex-col gap-xs transition-all hover:bg-white/10 hover:border-white/20">
+                                                              <div class="flex items-start gap-sm">
+                                                                  <div class="shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-primary/25 to-secondary/15 border border-white/10 flex items-center justify-center">
+                                                                      <span class="material-symbols-outlined text-primary text-[18px]">"person"</span>
+                                                                  </div>
+                                                                  <div class="flex-1 min-w-0 flex flex-col gap-[2px]">
+                                                                      <div class="flex items-center justify-between gap-sm">
+                                                                          <span class="text-on-surface font-semibold text-body-md truncate">{tx.donor_name.clone()}</span>
+                                                                          <span class="text-secondary font-bold text-body-lg shrink-0">"$" {format!("{:.2}", tx.amount)}</span>
+                                                                      </div>
+                                                                      <div class="flex items-center justify-between gap-sm text-label-sm text-on-surface-variant/80">
+                                                                          <span class="truncate">{leptos_fluent::move_tr!("streamer-via")} " " {tx.payment_method.clone()}</span>
+                                                                          <span class="shrink-0">{tx.created_at.clone()}</span>
+                                                                      </div>
+                                                                  </div>
+                                                              </div>
+                                                              {if let Some(msg_str) = msg {
+                                                                  view! {
+                                                                      <p class="text-on-surface-variant text-body-sm italic bg-surface-container-low/40 border border-white/5 rounded-lg p-sm mt-xs">
+                                                                          "\"" {msg_str} "\""
+                                                                      </p>
+                                                                  }.into_any()
+                                                              } else {
+                                                                  view! {}.into_any()
+                                                              }}
+                                                          </div>
                                                       }
                                                   }).collect_view()}
                                               </div>
                                           }.into_any()
                                       }
                                   }
-                                  Err(_) => view! { <div class="text-on-surface-variant text-center">"Failed to load recent tributes."</div> }.into_any()
+                                  Err(_) => view! { <div class="text-on-surface-variant text-center">{leptos_fluent::move_tr!("streamer-tributes-failed")}</div> }.into_any()
                               }
                           })
                       }}
                   </Suspense>
               </section>
+              </div>
           </main>
           <Footer/>
       }
