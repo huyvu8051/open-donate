@@ -11,6 +11,7 @@ pub struct DbStreamer {
     pub user_id: Option<String>,
     pub overlay_token: String,
     pub active_overlay_session: Option<String>,
+    pub payment_methods: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]

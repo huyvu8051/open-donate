@@ -1,8 +1,10 @@
 use leptos::prelude::*;
-use crate::app::{get_or_create_streamer, get_dashboard_transactions, Header, Footer};
+use crate::app::{get_or_create_streamer, get_dashboard_transactions, Header, Footer, UpdateStreamerProfile};
+use leptos_router::components::{Outlet};
+use leptos::form::ActionForm;
 
 #[component]
-pub fn DashboardPage() -> impl IntoView {
+pub fn DashboardLayout() -> impl IntoView {
     let onboard_resource = LocalResource::new(move || {
         async move {
             get_or_create_streamer().await
@@ -15,14 +17,7 @@ pub fn DashboardPage() -> impl IntoView {
                 onboard_resource.get().map(|res| {
                     match res {
                         Ok(Some(streamer)) => {
-                            let _profile_url = format!("/streamer/{}", streamer.username);
-                            let overlay_url = format!("/overlay/{}", streamer.username);
-                            let _donate_url = format!("http://localhost:3000/streamer/{}", streamer.username);
-                            let _avatar_url = if streamer.avatar_url.is_empty() { 
-                                "https://api.dicebear.com/9.x/avataaars/svg".to_string() 
-                            } else { 
-                                streamer.avatar_url.clone() 
-                            };
+                            provide_context(streamer.clone());
 
                             view! {
                                 <div class="bg-background text-on-surface font-body-md antialiased overflow-x-hidden">
@@ -35,19 +30,19 @@ pub fn DashboardPage() -> impl IntoView {
                                             <p class="text-label-sm font-label-sm text-on-surface-variant">"Manage your Glint account"</p>
                                         </div>
                                         <nav class="flex-1 flex flex-col gap-xs">
-                                            <a class="flex items-center gap-sm p-sm bg-primary-container text-on-primary-container rounded-xl font-bold translate-x-1 duration-200" href="#">
+                                            <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="/dashboard">
                                                 <span class="material-symbols-outlined">"dashboard"</span>
                                                 <span class="text-label-md font-label-md">"Dashboard"</span>
                                             </a>
-                                            <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="#">
+                                            <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="/dashboard/analytics">
                                                 <span class="material-symbols-outlined">"monitoring"</span>
                                                 <span class="text-label-md font-label-md">"Analytics"</span>
                                             </a>
-                                            <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="#">
+                                            <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="/dashboard/payments">
                                                 <span class="material-symbols-outlined">"payments"</span>
                                                 <span class="text-label-md font-label-md">"Payments"</span>
                                             </a>
-                                            <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="#">
+                                            <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="/dashboard/settings">
                                                 <span class="material-symbols-outlined">"settings"</span>
                                                 <span class="text-label-md font-label-md">"Settings"</span>
                                             </a>
@@ -71,64 +66,28 @@ pub fn DashboardPage() -> impl IntoView {
                                     // Main Content
                                     <main class="md:ml-64 pt-32 px-margin-mobile md:px-margin-desktop pb-24 md:pb-xl min-h-screen">
                                         <div class="max-w-7xl mx-auto">
-                                            // Welcome Header
-                                            <div class="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
-                                            <div>
-                                                <h1 data-testid="streamer-dashboard-header" class="text-headline-lg font-headline-lg text-on-surface">"Streamer Dashboard"</h1>
-                                                <p class="text-body-md font-body-md text-on-surface-variant">
-                                                    "Welcome back, " {streamer.display_name.clone()} ". Your creator hub is ready."
-                                                </p>
-                                            </div>
-                                            <a
-                                                class="inline-flex items-center gap-xs px-md py-sm rounded-xl bg-primary-container text-on-primary-container font-bold hover:brightness-110 transition-all active:scale-[0.98]"
-                                                href=overlay_url.clone()
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                            >
-                                                <span class="material-symbols-outlined text-[20px]">"open_in_new"</span>
-                                                <span>"Open Overlay"</span>
-                                            </a>
-                                        </div>
-
-                                        <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-md md:p-xl mb-lg">
-                                            <div class="flex flex-col gap-sm">
-                                                <div class="flex items-center gap-sm">
-                                                    <span class="material-symbols-outlined text-primary">"link"</span>
-                                                    <h2 class="text-headline-md font-headline-md text-on-surface">"Overlay URL"</h2>
-                                                </div>
-                                                <p class="text-body-md text-on-surface-variant mb-sm">
-                                                    "Copy this secure URL and paste it as a Browser Source in OBS. Only one instance can be active at a time. If you open it elsewhere, the previous session will be revoked."
-                                                </p>
-                                                <div class="flex items-center gap-sm bg-black/40 border border-white/10 rounded-xl p-sm">
-                                                    <code class="flex-1 text-on-surface text-label-md font-mono overflow-hidden text-ellipsis whitespace-nowrap px-sm">
-                                                        "http://localhost:3000" {overlay_url.clone()}
-                                                    </code>
-                                                </div>
-                                            </div>
-                                        </section>
-
-                                        <DonationHistory streamer_id={streamer.id} />
+                                            <Outlet />
                                     </div>
                                 </main>
 
                                     // Mobile Bottom Navigation
                                     <nav class="fixed bottom-0 w-full bg-surface-container-low/90 backdrop-blur-xl border-t border-white/10 flex justify-around items-center h-16 z-50 md:hidden pb-safe">
-                                        <a href="#" class="flex flex-col items-center gap-1 text-primary w-16">
+                                        <a href="/dashboard" class="flex flex-col items-center gap-1 text-primary w-16">
                                             <span class="material-symbols-outlined text-[24px]">"dashboard"</span>
                                             <span class="text-[10px] font-bold leading-none">"Dashboard"</span>
                                         </a>
-                                        <a href="#" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16">
+                                        <a href="/dashboard/analytics" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16">
                                             <span class="material-symbols-outlined text-[24px]">"monitoring"</span>
                                             <span class="text-[10px] font-medium leading-none">"Analytics"</span>
                                         </a>
                                         <button class="relative -top-5 w-12 h-12 bg-gradient-to-tr from-primary to-primary-container rounded-full shadow-lg shadow-primary/30 flex items-center justify-center text-on-primary active:scale-95 transition-transform border-4 border-background">
                                             <span class="material-symbols-outlined text-[24px]">"videocam"</span>
                                         </button>
-                                        <a href="#" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16">
+                                        <a href="/dashboard/payments" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16">
                                             <span class="material-symbols-outlined text-[24px]">"payments"</span>
                                             <span class="text-[10px] font-medium leading-none">"Payments"</span>
                                         </a>
-                                        <a href="#" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16">
+                                        <a href="/dashboard/settings" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16">
                                             <span class="material-symbols-outlined text-[24px]">"settings"</span>
                                             <span class="text-[10px] font-medium leading-none">"Settings"</span>
                                         </a>
@@ -157,7 +116,12 @@ pub fn DashboardPage() -> impl IntoView {
                             }.into_any()
                         },
                         Ok(None) => view! {
-                            <div class="p-8 text-center">"You must be logged in to access the dashboard."</div>
+                            <div class="p-8 text-center flex flex-col items-center justify-center min-h-[50vh] gap-md">
+                                <p class="text-on-surface-variant text-body-lg">"You must be logged in to access the dashboard."</p>
+                                <a href="/api/auth/login" class="bg-primary text-on-primary px-xl py-md rounded-xl font-bold hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20">
+                                    "Log In / Register"
+                                </a>
+                            </div>
                         }.into_any(),
                         Err(e) => view! {
                             <div class="p-8 text-center text-red-500">
@@ -170,6 +134,135 @@ pub fn DashboardPage() -> impl IntoView {
         </Transition>
     }
 }
+
+#[component]
+pub fn DashboardHome() -> impl IntoView {
+    let streamer = use_context::<crate::db::DbStreamer>().expect("Streamer context missing");
+    let overlay_url = format!("/overlay/{}", streamer.username);
+
+    view! {
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
+            <div>
+                <h1 data-testid="streamer-dashboard-header" class="text-headline-lg font-headline-lg text-on-surface">"Streamer Dashboard"</h1>
+                <p class="text-body-md font-body-md text-on-surface-variant">
+                    "Welcome back, " {streamer.display_name.clone()} ". Your creator hub is ready."
+                </p>
+            </div>
+            <a
+                class="inline-flex items-center gap-xs px-md py-sm rounded-xl bg-primary-container text-on-primary-container font-bold hover:brightness-110 transition-all active:scale-[0.98]"
+                href=overlay_url.clone()
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                <span class="material-symbols-outlined text-[20px]">"open_in_new"</span>
+                <span>"Open Overlay"</span>
+            </a>
+        </div>
+
+        <DonationHistory streamer_id={streamer.id} />
+    }
+}
+
+#[component]
+pub fn SettingsPage() -> impl IntoView {
+    let streamer = use_context::<crate::db::DbStreamer>().expect("Streamer context missing");
+    let update_action = ServerAction::<UpdateStreamerProfile>::new();
+    let action_value = update_action.value();
+    
+    view! {
+        <div class="flex flex-col gap-lg max-w-2xl">
+            <h1 class="text-headline-lg font-headline-lg text-on-surface">"Settings"</h1>
+            <ActionForm action=update_action>
+                <div class="flex flex-col gap-md bg-surface-container-low/40 backdrop-blur-md border border-white/10 rounded-2xl p-lg">
+                    <div class="flex flex-col gap-xs">
+                    <label class="text-label-md font-bold text-on-surface">"Streamer Name"</label>
+                    <input type="text" name="new_display_name" data-testid="settings-display-name-input" class="bg-surface-variant/30 border-none rounded-lg px-md py-sm text-on-surface focus:ring-2 focus:ring-primary" value={streamer.display_name.clone()} required />
+                </div>
+                <div class="flex flex-col gap-xs">
+                    <label class="text-label-md font-bold text-on-surface">"Description"</label>
+                    <textarea name="new_bio" data-testid="settings-bio-input" class="bg-surface-variant/30 border-none rounded-lg px-md py-sm text-on-surface focus:ring-2 focus:ring-primary h-24" required>{streamer.bio.clone()}</textarea>
+                </div>
+                <div class="flex flex-col gap-xs">
+                    <label class="text-label-md font-bold text-on-surface">"Link ID (Username)"</label>
+                    <input type="text" name="new_username" data-testid="settings-username-input" class="bg-surface-variant/30 border-none rounded-lg px-md py-sm text-on-surface focus:ring-2 focus:ring-primary" value={streamer.username.clone()} required pattern="^[a-zA-Z0-9_]+$" title="Only letters, numbers, and underscores allowed" />
+                    <span class="text-label-sm text-on-surface-variant">"This is your public profile path: /streamer/YOUR_LINK_ID"</span>
+                </div>
+                
+                {streamer.payment_methods.clone().into_iter().map(|pm| view! { <input type="hidden" name="payment_methods[]" value=pm /> }).collect_view()}
+                
+                <Suspense fallback=|| ()>
+                    {move || match action_value.get() {
+                        Some(Ok(_)) => view! { <div data-testid="settings-success-message" class="text-secondary font-bold">"Settings updated successfully!"</div> }.into_any(),
+                        Some(Err(e)) => view! { <div data-testid="settings-error-message" class="text-error font-bold">{format!("Error: {}", e)}</div> }.into_any(),
+                        None => view! {}.into_any()
+                    }}
+                </Suspense>
+
+                <div class="flex justify-end mt-sm">
+                    <button type="submit" data-testid="settings-save-button" class="bg-primary text-on-primary font-bold px-lg py-sm rounded-xl hover:brightness-110 active:scale-95 transition-all">
+                        "Save Settings"
+                    </button>
+                </div>
+                </div>
+            </ActionForm>
+        </div>
+    }
+}
+
+#[component]
+pub fn PaymentsPage() -> impl IntoView {
+    let streamer = use_context::<crate::db::DbStreamer>().expect("Streamer context missing");
+    let update_action = ServerAction::<crate::app::UpdateStreamerProfile>::new();
+    let action_value = update_action.value();
+
+    view! {
+        <div class="mb-lg">
+            <h1 data-testid="streamer-payments-header" class="text-headline-lg font-headline-lg text-on-surface">"Payment Methods"</h1>
+            <p class="text-body-md font-body-md text-on-surface-variant">
+                "Configure the payment options your viewers can use to donate."
+            </p>
+        </div>
+
+        <div class="bg-surface-container-low/40 backdrop-blur-md border border-white/10 rounded-2xl p-md md:p-xl max-w-2xl">
+            <ActionForm action=update_action>
+                <div class="flex flex-col gap-lg">
+                    <input type="hidden" name="new_display_name" value={streamer.display_name.clone()} />
+                    <input type="hidden" name="new_bio" value={streamer.bio.clone()} />
+                    <input type="hidden" name="new_username" value={streamer.username.clone()} />
+                    
+                    <div class="flex flex-col gap-xs">
+                        <label class="text-label-md font-bold text-on-surface">"Supported Methods"</label>
+                        <div class="flex flex-col gap-sm">
+                            <label class="flex items-center gap-sm cursor-pointer">
+                                <input type="checkbox" name="payment_methods[]" value="Mock Auto" checked=streamer.payment_methods.contains(&"Mock Auto".to_string()) class="w-5 h-5 accent-primary bg-surface-variant/30 border-none rounded" />
+                                <span class="text-body-md text-on-surface">"Mock Auto"</span>
+                            </label>
+                            <label class="flex items-center gap-sm cursor-pointer">
+                                <input type="checkbox" name="payment_methods[]" value="Mock Manual" checked=streamer.payment_methods.contains(&"Mock Manual".to_string()) class="w-5 h-5 accent-primary bg-surface-variant/30 border-none rounded" />
+                                <span class="text-body-md text-on-surface">"Mock Manual"</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <Suspense fallback=|| ()>
+                        {move || match action_value.get() {
+                            Some(Ok(_)) => view! { <div data-testid="payments-success-message" class="text-secondary font-bold">"Payment settings updated successfully!"</div> }.into_any(),
+                            Some(Err(e)) => view! { <div class="text-error font-bold">{format!("Error: {}", e)}</div> }.into_any(),
+                            None => view! {}.into_any()
+                        }}
+                    </Suspense>
+
+                    <div class="flex justify-end pt-sm border-t border-white/10">
+                        <button type="submit" data-testid="save-payments-btn" class="bg-primary text-on-primary font-bold py-sm px-xl rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20">
+                            "Save Changes"
+                        </button>
+                    </div>
+                </div>
+            </ActionForm>
+        </div>
+    }
+}
+
 
 #[component]
 pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
@@ -302,7 +395,27 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
                         </tr>
                     </thead>
                     <tbody class="text-body-md">
-                        <Suspense fallback=move || view! { <tr><td colspan="4" class="py-md text-center text-on-surface-variant">"Loading..."</td></tr> }>
+                        <Suspense fallback=move || view! {
+                            {(0..page_size.get_untracked()).map(|_| view! {
+                                <tr class="border-b border-white/5 animate-pulse">
+                                    <td class="py-md pr-md">
+                                        <div class="flex items-center gap-sm">
+                                            <div class="w-8 h-8 rounded-full bg-surface-variant/50"></div>
+                                            <div class="h-4 w-24 bg-surface-variant/50 rounded"></div>
+                                        </div>
+                                    </td>
+                                    <td class="py-md px-md">
+                                        <div class="h-4 w-16 bg-surface-variant/50 rounded"></div>
+                                    </td>
+                                    <td class="py-md px-md">
+                                        <div class="h-4 w-32 bg-surface-variant/50 rounded"></div>
+                                    </td>
+                                    <td class="py-md pl-md">
+                                        <div class="h-4 w-20 bg-surface-variant/50 rounded"></div>
+                                    </td>
+                                </tr>
+                            }).collect_view()}
+                        }>
                             {move || {
                                 tx_resource.get().map(|res| match res {
                                     Ok((txs, _)) => {
@@ -362,6 +475,161 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
                     </button>
                 </div>
             </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn AnalyticsPage() -> impl IntoView {
+    let streamer = use_context::<crate::db::DbStreamer>().expect("Streamer context missing");
+    let (time_range, set_time_range) = create_signal("week".to_string());
+    
+    let analytics_resource = LocalResource::new(move || {
+        let streamer_id = streamer.id;
+        let range = time_range.get();
+        async move {
+            crate::app::get_streamer_analytics(streamer_id, range).await
+        }
+    });
+
+    view! {
+        <div class="flex flex-col gap-lg mb-xl">
+            <h1 class="text-headline-lg font-headline-lg text-on-surface">"Analytics"</h1>
+            
+            <Suspense fallback=move || view! { <div class="text-on-surface-variant">"Loading analytics..."</div> }>
+                {move || analytics_resource.get().map(|res| match res {
+                    Ok(analytics) => view! {
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-md mb-lg">
+                            // Total Revenue Card
+                            <div class="bg-surface-container-low/40 backdrop-blur-md border border-white/10 rounded-2xl p-lg flex flex-col gap-sm">
+                                <h3 class="text-label-md font-bold text-on-surface-variant flex items-center gap-xs">
+                                    <span class="material-symbols-outlined text-primary">"account_balance_wallet"</span>
+                                    "Total Revenue"
+                                </h3>
+                                <p class="text-display-md font-display-md text-primary font-bold">
+                                    {format!("${:.2}", analytics.total_revenue)}
+                                </p>
+                            </div>
+                            // Total Donations Card
+                            <div class="bg-surface-container-low/40 backdrop-blur-md border border-white/10 rounded-2xl p-lg flex flex-col gap-sm">
+                                <h3 class="text-label-md font-bold text-on-surface-variant flex items-center gap-xs">
+                                    <span class="material-symbols-outlined text-secondary">"favorite"</span>
+                                    "Total Donations"
+                                </h3>
+                                <p class="text-display-md font-display-md text-secondary font-bold">
+                                    {analytics.donation_count}
+                                </p>
+                            </div>
+                        </div>
+
+                        // Revenue Over Time Chart
+                        <div class="bg-surface-container-low/40 backdrop-blur-md border border-white/10 rounded-2xl p-lg flex flex-col gap-md mb-lg">
+                            <div class="flex items-center justify-between gap-sm mb-xs">
+                                <h3 class="text-title-lg font-title-lg text-on-surface flex items-center gap-sm">
+                                    <span class="material-symbols-outlined text-primary">"bar_chart"</span>
+                                    "Revenue Over Time"
+                                </h3>
+                                
+                                <div class="flex bg-surface-variant/50 p-1 rounded-lg">
+                                    {["day", "week", "month"].into_iter().map(|range| {
+                                        let label = match range {
+                                            "day" => "24h",
+                                            "week" => "7d",
+                                            "month" => "30d",
+                                            _ => "",
+                                        };
+                                        view! {
+                                            <button 
+                                                class=move || format!(
+                                                    "px-3 py-1 rounded-md text-label-sm font-bold transition-all {}",
+                                                    if time_range.get() == range { "bg-primary text-on-primary shadow" } else { "text-on-surface-variant hover:text-on-surface" }
+                                                )
+                                                on:click=move |_| set_time_range.set(range.to_string())
+                                            >
+                                                {label}
+                                            </button>
+                                        }
+                                    }).collect_view()}
+                                </div>
+                            </div>
+
+                            {
+                                if analytics.revenue_over_time.is_empty() {
+                                    view! { <p class="text-body-md text-on-surface-variant">"No revenue data for this period."</p> }.into_any()
+                                } else {
+                                    let max_rev = analytics.revenue_over_time.iter().map(|(_, r)| *r).fold(0.0_f64, f64::max);
+                                    let max_rev = if max_rev == 0.0 { 1.0 } else { max_rev };
+                                    
+                                    let bars = analytics.revenue_over_time.clone().into_iter().map(|(date, rev)| {
+                                        let height_pct = (rev / max_rev) * 100.0;
+                                        view! {
+                                            <div class="flex-1 flex flex-col items-center gap-xs group">
+                                                <div class="relative w-full flex justify-center h-full items-end h-32">
+                                                    <div 
+                                                        class="w-full max-w-[48px] bg-primary/30 hover:bg-primary transition-all rounded-t-md relative"
+                                                        style=("height", format!("{}%", height_pct.max(2.0)))
+                                                    >
+                                                        <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface-container text-on-surface text-[10px] font-bold px-1 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-lg z-10 border border-white/10">
+                                                            {format!("${:.2}", rev)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <span class="text-label-sm text-on-surface-variant text-[10px]">{date}</span>
+                                            </div>
+                                        }
+                                    }).collect_view();
+
+                                    view! {
+                                        <div class="flex items-end gap-2 w-full pt-4">
+                                            {bars}
+                                        </div>
+                                    }.into_any()
+                                }
+                            }
+                        </div>
+
+                        // Top Donors
+                        <div class="bg-surface-container-low/40 backdrop-blur-md border border-white/10 rounded-2xl p-lg flex flex-col gap-md">
+                            <h3 class="text-title-lg font-title-lg text-on-surface flex items-center gap-sm">
+                                <span class="material-symbols-outlined text-tertiary">"emoji_events"</span>
+                                "Top Donors"
+                            </h3>
+                            {
+                                if analytics.top_donors.is_empty() {
+                                    view! {
+                                        <p class="text-body-md text-on-surface-variant">"No donations yet."</p>
+                                    }.into_any()
+                                } else {
+                                    let donors_view = analytics.top_donors.into_iter().enumerate().map(|(i, (name, amount))| {
+                                        view! {
+                                            <div class="flex items-center justify-between p-sm border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors rounded-lg">
+                                                <div class="flex items-center gap-md">
+                                                    <div class="w-8 h-8 rounded-full bg-surface-variant flex items-center justify-center text-on-surface font-bold">
+                                                        {i + 1}
+                                                    </div>
+                                                    <span class="text-body-lg font-bold text-on-surface">{name}</span>
+                                                </div>
+                                                <span class="text-title-md text-primary font-mono">{format!("${:.2}", amount)}</span>
+                                            </div>
+                                        }
+                                    }).collect_view();
+
+                                    view! {
+                                        <div class="flex flex-col">
+                                            {donors_view}
+                                        </div>
+                                    }.into_any()
+                                }
+                            }
+                        </div>
+                    }.into_any(),
+                    Err(e) => view! {
+                        <div class="text-error bg-error/10 p-md rounded-xl">
+                            {format!("Failed to load analytics: {:?}", e)}
+                        </div>
+                    }.into_any()
+                })}
+            </Suspense>
         </div>
     }
 }

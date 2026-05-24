@@ -75,7 +75,7 @@ test.describe('Real-time Dashboard Flow', () => {
     const amount = '50';
 
     console.log(`Viewer: Making donation of $${amount} from ${donorName}...`);
-    await viewerApp.fillDonationForm(donorName, amount, donationMsg, 'Credit Card');
+    await viewerApp.fillDonationForm(donorName, amount, donationMsg, 'Mock Auto');
     await viewerApp.submitDonation();
     await viewerApp.verifyMockPaymentFlow();
 

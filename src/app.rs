@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
 use leptos_router::{
-    components::{Route, Router, Routes},
+    components::{ParentRoute, Route, Router, Routes},
     hooks::{use_location, use_params_map},
     ParamSegment, StaticSegment,
 };
@@ -33,6 +33,14 @@ pub struct LeaderboardEntry {
     pub donation_count: i64,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct StreamerAnalytics {
+    pub total_revenue: f64,
+    pub donation_count: i64,
+    pub top_donors: Vec<(String, f64)>,
+    pub revenue_over_time: Vec<(String, f64)>,
+}
+
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
         <!DOCTYPE html>
@@ -54,6 +62,15 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 }
 
 #[component]
+fn I18nProvider(children: Children) -> impl IntoView {
+    leptos_fluent::leptos_fluent! {
+        children: children(),
+        locales: "./locales",
+        default_language: "en",
+    }
+}
+
+#[component]
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
@@ -63,19 +80,26 @@ pub fn App() -> impl IntoView {
     provide_context(user_resource);
 
     view! {
-        <Stylesheet id="leptos" href="/pkg/open-donate.css"/>
-        <Title text="Glint | Empower Your Content"/>
+        <I18nProvider>
+            <Stylesheet id="leptos" href="/pkg/open-donate.css"/>
+            <Title text="Glint | Empower Your Content"/>
 
-        <Router>
-            <Routes fallback=|| "Page not found.".into_view()>
-                <Route path=StaticSegment("") view=LandingPage/>
-                <Route path=StaticSegment("explore") view=ExplorePage/>
-                <Route path=StaticSegment("leaderboard") view=LeaderboardPage/>
-                <Route path=StaticSegment("dashboard") view=crate::dashboard::DashboardPage/>
-                <Route path=(StaticSegment("streamer"), ParamSegment("username")) view=StreamerPage/>
-                <Route path=(StaticSegment("overlay"), ParamSegment("token")) view=crate::overlay::OverlayPage/>
-            </Routes>
-        </Router>
+            <Router>
+                <Routes fallback=|| "Page not found.".into_view()>
+                    <Route path=StaticSegment("") view=LandingPage/>
+                    <Route path=StaticSegment("explore") view=ExplorePage/>
+                    <Route path=StaticSegment("leaderboard") view=LeaderboardPage/>
+                    <ParentRoute path=StaticSegment("dashboard") view=crate::dashboard::DashboardLayout>
+                        <Route path=StaticSegment("") view=crate::dashboard::DashboardHome/>
+                        <Route path=StaticSegment("settings") view=crate::dashboard::SettingsPage/>
+                        <Route path=StaticSegment("payments") view=crate::dashboard::PaymentsPage/>
+                        <Route path=StaticSegment("analytics") view=crate::dashboard::AnalyticsPage/>
+                    </ParentRoute>
+                    <Route path=(StaticSegment("streamer"), ParamSegment("username")) view=StreamerPage/>
+                    <Route path=(StaticSegment("overlay"), ParamSegment("token")) view=crate::overlay::OverlayPage/>
+                </Routes>
+            </Router>
+        </I18nProvider>
     }
 }
 
@@ -99,39 +123,98 @@ pub fn Header() -> impl IntoView {
             "text-on-surface-variant font-medium text-label-md font-label-md hover:text-primary transition-colors"
         }
     };
+    let (is_open, set_is_open) = signal(false);
 
     view! {
-        <header class="fixed top-0 w-full z-50 bg-surface/60 backdrop-blur-xl border-b border-white/20 shadow-sm h-20 flex justify-between items-center px-margin-desktop">
-            <div class="flex items-center gap-md">
-                <a href="/" class="text-headline-md font-headline-md font-extrabold text-primary tracking-tighter">"Glint"</a>
-                <nav class="hidden md:flex items-center gap-md ml-lg">
-                    <a class=move || nav_class("/") href="/">"Explore"</a>
-                    <a class=move || nav_class("/explore") href="/explore">"Creators"</a>
-                    <a class=move || nav_class("/leaderboard") href="/leaderboard">"Leaderboard"</a>
-                </nav>
+        <header class="fixed top-0 w-full z-50 bg-surface/60 backdrop-blur-xl border-b border-white/20 shadow-sm flex flex-col px-margin-mobile md:px-margin-desktop">
+            <div class="h-20 flex justify-between items-center w-full">
+                <div class="flex items-center gap-md">
+                    <a href="/" class="text-headline-md font-headline-md font-extrabold text-primary tracking-tighter">"Glint"</a>
+                    <nav class="hidden md:flex items-center gap-md ml-lg">
+                        <a class=move || nav_class("/") href="/">"Explore"</a>
+                        <a class=move || nav_class("/explore") href="/explore">"Creators"</a>
+                        <a class=move || nav_class("/leaderboard") href="/leaderboard">"Leaderboard"</a>
+                    </nav>
+                </div>
+                <div class="flex items-center gap-md">
+                    <Suspense fallback=move || view! { <span class="text-on-surface-variant">"Loading..."</span> }>
+                        {move || {
+                            match user_resource.get() {
+                                Some(Ok(Some(user))) => view! {
+                                    <div class="flex items-center gap-sm">
+                                        <a href="/dashboard" class="hidden sm:inline text-on-surface text-label-md font-semibold hover:text-primary transition-colors">"Hello, " {user.name.clone()}</a>
+                                        <a href="/api/logout" rel="external" class="px-sm py-xs bg-surface-container-highest border border-white/10 hover:bg-surface-container-highest/80 text-on-surface rounded-lg text-label-sm font-label-sm transition-all">
+                                            {leptos_fluent::move_tr!("header-logout")}
+                                        </a>
+                                        <LanguageSwitcher />
+                                    </div>
+                                }.into_any(),
+                                _ => view! {
+                                    <div class="flex items-center gap-sm">
+                                        <a href="/api/login" rel="external" class="px-md py-xs bg-primary text-on-primary rounded-lg text-label-md font-label-md font-semibold hover:bg-primary/95 transition-all shadow-sm">
+                                            {leptos_fluent::move_tr!("header-login")}
+                                        </a>
+                                        <LanguageSwitcher />
+                                    </div>
+                                }.into_any()
+                            }
+                        }}
+                    </Suspense>
+                    <button class="md:hidden text-on-surface flex items-center justify-center" on:click=move |_| set_is_open.update(|o| *o = !*o)>
+                        <span class="material-symbols-outlined">{move || if is_open.get() { "close" } else { "menu" }}</span>
+                    </button>
+                </div>
             </div>
-            <div class="flex items-center gap-md">
-                <Suspense fallback=move || view! { <span class="text-on-surface-variant">"Loading..."</span> }>
-                    {move || {
-                        match user_resource.get() {
-                            Some(Ok(Some(user))) => view! {
-                                <div class="flex items-center gap-sm">
-                                    <span class="text-on-surface text-label-md font-semibold">"Hello, " {user.name}</span>
-                                    <a href="/api/logout" rel="external" class="px-sm py-xs bg-surface-container-highest border border-white/10 hover:bg-surface-container-highest/80 text-on-surface rounded-lg text-label-sm font-label-sm transition-all">
-                                        "Logout"
-                                    </a>
-                                </div>
-                            }.into_any(),
-                            _ => view! {
-                                <a href="/api/login" rel="external" class="px-md py-xs bg-primary text-on-primary rounded-lg text-label-md font-label-md font-semibold hover:bg-primary/95 transition-all shadow-sm">
-                                    "Login with Zitadel"
-                                </a>
-                            }.into_any()
-                        }
-                    }}
-                </Suspense>
-            </div>
+            {move || if is_open.get() {
+                view! {
+                    <nav class="md:hidden flex flex-col gap-sm pb-md border-t border-white/10 pt-md">
+                        <a class=move || nav_class("/") href="/">"Explore"</a>
+                        <a class=move || nav_class("/explore") href="/explore">"Creators"</a>
+                        <a class=move || nav_class("/leaderboard") href="/leaderboard">"Leaderboard"</a>
+                        <Suspense fallback=move || view! {}>
+                            {move || match user_resource.get() {
+                                Some(Ok(Some(_))) => view! {
+                                    <a class=move || nav_class("/dashboard") href="/dashboard">"Dashboard"</a>
+                                }.into_any(),
+                                _ => view! {}.into_any()
+                            }}
+                        </Suspense>
+                    </nav>
+                }.into_any()
+            } else {
+                view! {}.into_any()
+            }}
         </header>
+    }
+}
+
+#[component]
+pub fn LanguageSwitcher() -> impl IntoView {
+    let i18n = expect_context::<leptos_fluent::I18n>();
+
+    view! {
+        <div class="flex items-center gap-1 bg-surface-container border border-white/10 rounded-lg p-1 shadow-inner">
+            <button
+                class=move || format!("px-2 py-0.5 rounded text-[10px] font-bold transition-all {}", if i18n.language.get().id.to_string() == "en" { "bg-primary text-on-primary shadow-sm" } else { "text-on-surface-variant hover:text-on-surface" })
+                on:click=move |_| {
+                    if let Some(lang) = i18n.languages.iter().find(|l| l.id.to_string() == "en") {
+                        i18n.language.set(lang);
+                    }
+                }
+            >
+                "EN"
+            </button>
+            <button
+                class=move || format!("px-2 py-0.5 rounded text-[10px] font-bold transition-all {}", if i18n.language.get().id.to_string() == "vi" { "bg-primary text-on-primary shadow-sm" } else { "text-on-surface-variant hover:text-on-surface" })
+                on:click=move |_| {
+                    if let Some(lang) = i18n.languages.iter().find(|l| l.id.to_string() == "vi") {
+                        i18n.language.set(lang);
+                    }
+                }
+            >
+                "VI"
+            </button>
+        </div>
     }
 }
 
@@ -164,20 +247,20 @@ pub fn Hero() -> impl IntoView {
             <div class="js-glow absolute bottom-1/4 -right-20 w-96 h-96 bg-secondary/10 rounded-full blur-[120px]"></div>
             <div class="relative z-10 max-w-4xl mx-auto space-y-md">
                 <span class="inline-block px-sm py-xs bg-surface-container-highest/40 backdrop-blur-md rounded-full border border-white/10 text-secondary text-label-md font-label-md">
-                    "Future of Digital Support"
+                    {leptos_fluent::move_tr!("landing-future-of-support")}
                 </span>
                 <h1 class="text-headline-xl-mobile md:text-headline-xl font-headline-xl text-on-surface">
-                    "Empower Your Content, One " <span class="text-primary italic">"Glint"</span> " at a Time"
+                    {leptos_fluent::move_tr!("landing-title-start")} <span class="text-primary italic">{leptos_fluent::move_tr!("landing-title-glint")}</span> {leptos_fluent::move_tr!("landing-title-end")}
                 </h1>
                 <p class="text-body-lg font-body-lg text-on-surface-variant max-w-2xl mx-auto">
-                    "The ultra-fast, transparent platform connecting creators and fans through real-time rewards and deep interactive experiences."
+                    {leptos_fluent::move_tr!("landing-subtitle")}
                 </p>
                 <div class="flex flex-col md:flex-row items-center justify-center gap-md pt-base">
                     <button class="px-lg py-md bg-secondary text-on-secondary-container rounded-xl font-headline-md text-headline-md neon-glow-secondary hover:scale-105 transition-transform active:scale-95 duration-150">
-                        "Donate Now"
+                        {leptos_fluent::move_tr!("landing-donate-now")}
                     </button>
                     <button class="px-lg py-md bg-surface-container-highest/40 backdrop-blur-md border border-white/20 text-on-surface rounded-xl font-headline-md text-headline-md hover:bg-surface-container-highest/60 transition-all">
-                        "Start Creating"
+                        {leptos_fluent::move_tr!("landing-start-creating")}
                     </button>
                 </div>
             </div>
@@ -581,6 +664,16 @@ pub fn StreamerPage() -> impl IntoView {
         }
     });
 
+    let accept_action = Action::new(move |tx_id: &i32| {
+        let tx = *tx_id;
+        async move { accept_mock_payment(tx).await }
+    });
+
+    let reject_action = Action::new(move |tx_id: &i32| {
+        let tx = *tx_id;
+        async move { reject_mock_payment(tx).await }
+    });
+
     // React to payment init
     Effect::new(move || {
         if let Some(result) = payment_action.value().get() {
@@ -729,16 +822,16 @@ pub fn StreamerPage() -> impl IntoView {
                   <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-md md:p-xl flex flex-col gap-md">
                       <div class="flex items-center gap-sm">
                           <span class="material-symbols-outlined text-secondary" data-icon="volunteer_activism">"volunteer_activism"</span>
-                          <h2 class="text-headline-md font-headline-md text-on-surface">"Send a Glint"</h2>
+                          <h2 class="text-headline-md font-headline-md text-on-surface">{leptos_fluent::move_tr!("donate-send-a-glint")}</h2>
                       </div>
 
                       // Your Name Input
                       <div class="flex flex-col gap-base">
-                          <label class="text-label-md font-label-md text-on-surface-variant">"Your Name"</label>
+                          <label class="text-label-md font-label-md text-on-surface-variant">{leptos_fluent::move_tr!("donate-your-name")}</label>
                           <input 
                               data-testid="donor-name-input"
                               class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl px-md py-md text-body-md font-body-md focus:outline-none focus:border-primary transition-all text-on-surface" 
-                              placeholder="Enter your name (e.g. Anonymous)" 
+                              placeholder=move || leptos_fluent::tr!("donate-your-name-placeholder")
                               type="text"
                               prop:value=move || donor_name.get()
                               on:input=move |ev| donor_name.set(event_target_value(&ev))
@@ -747,7 +840,7 @@ pub fn StreamerPage() -> impl IntoView {
 
                       // Amount Selection
                       <div class="flex flex-col gap-base">
-                          <label class="text-label-md font-label-md text-on-surface-variant">"Amount"</label>
+                          <label class="text-label-md font-label-md text-on-surface-variant">{leptos_fluent::move_tr!("donate-amount")}</label>
                           <div class="grid grid-cols-2 md:grid-cols-4 gap-base">
                               {
                                   let amounts = vec!["5", "10", "25", "50"];
@@ -784,11 +877,11 @@ pub fn StreamerPage() -> impl IntoView {
 
                       // Your Message
                       <div class="flex flex-col gap-base">
-                          <label class="text-label-md font-label-md text-on-surface-variant">"Your Message"</label>
+                          <label class="text-label-md font-label-md text-on-surface-variant">{leptos_fluent::move_tr!("donate-message")}</label>
                           <textarea 
                               data-testid="donation-message-input"
                               class="w-full bg-surface-container-low/40 border border-white/10 rounded-xl px-md py-md text-body-md font-body-md focus:outline-none focus:border-primary transition-all min-h-[120px] resize-none text-on-surface" 
-                              placeholder="Enter a message to be read on stream..."
+                              placeholder=move || leptos_fluent::tr!("donate-message-placeholder")
                               prop:value=move || message.get()
                               on:input=move |ev| message.set(event_target_value(&ev))
                           ></textarea>
@@ -796,29 +889,36 @@ pub fn StreamerPage() -> impl IntoView {
 
                       // Payment Method
                       <div class="flex flex-col gap-base">
-                          <label class="text-label-md font-label-md text-on-surface-variant">"Payment Method"</label>
-                          <div class="grid grid-cols-3 gap-base">
-                              <label class="cursor-pointer" on:click=move |_| payment_method.set("Credit Card".to_string())>
-                                  <input checked=move || payment_method.get() == "Credit Card" class="hidden peer" name="payment" type="radio"/>
-                                  <div class="flex flex-col items-center justify-center bg-white/5 backdrop-blur-md p-sm rounded-xl text-center border border-white/10 peer-checked:border-primary peer-checked:bg-primary/5 transition-all">
-                                      <span class="material-symbols-outlined text-primary mb-xs">"payments"</span>
-                                      <span class="text-label-sm font-label-sm">"Credit Card"</span>
-                                  </div>
-                              </label>
-                              <label class="cursor-pointer" on:click=move |_| payment_method.set("PayPal".to_string())>
-                                  <input checked=move || payment_method.get() == "PayPal" class="hidden peer" name="payment" type="radio"/>
-                                  <div class="flex flex-col items-center justify-center bg-white/5 backdrop-blur-md p-sm rounded-xl text-center border border-white/10 peer-checked:border-primary peer-checked:bg-primary/5 transition-all">
-                                      <span class="material-symbols-outlined text-primary mb-xs">"account_balance_wallet"</span>
-                                      <span class="text-label-sm font-label-sm">"PayPal"</span>
-                                  </div>
-                              </label>
-                              <label class="cursor-pointer" on:click=move |_| payment_method.set("Crypto".to_string())>
-                                  <input checked=move || payment_method.get() == "Crypto" class="hidden peer" name="payment" type="radio"/>
-                                  <div class="flex flex-col items-center justify-center bg-white/5 backdrop-blur-md p-sm rounded-xl text-center border border-white/10 peer-checked:border-primary peer-checked:bg-primary/5 transition-all">
-                                      <span class="material-symbols-outlined text-primary mb-xs">"currency_bitcoin"</span>
-                                      <span class="text-label-sm font-label-sm">"Crypto"</span>
-                                  </div>
-                              </label>
+                          <label class="text-label-md font-label-md text-on-surface-variant">{leptos_fluent::move_tr!("donate-payment-method")}</label>
+                          <div class="grid grid-cols-2 sm:grid-cols-3 gap-base">
+                              <Suspense fallback=move || view! { <span class="text-on-surface-variant">"Loading methods..."</span> }>
+                                  {move || {
+                                      match streamer_resource.get() {
+                                          Some(Ok(Some(s))) => {
+                                              let methods = s.payment_methods.clone();
+                                              if methods.is_empty() {
+                                                  view! { <span class="text-on-surface-variant col-span-3">"No payment methods available."</span> }.into_any()
+                                              } else {
+                                                  methods.into_iter().map(|pm| {
+                                                      let icon = if pm == "Mock Auto" { "autorenew" } else { "pan_tool" };
+                                                      let pm_clone = pm.clone();
+                                                      let pm_clone2 = pm.clone();
+                                                      view! {
+                                                          <label class="cursor-pointer" on:click=move |_| payment_method.set(pm_clone.clone())>
+                                                              <input checked=move || payment_method.get() == pm_clone2 class="hidden peer" name="payment" type="radio"/>
+                                                              <div class="flex flex-col items-center justify-center bg-white/5 backdrop-blur-md p-sm rounded-xl text-center border border-white/10 peer-checked:border-primary peer-checked:bg-primary/5 transition-all">
+                                                                  <span class="material-symbols-outlined text-primary mb-xs">{icon}</span>
+                                                                  <span class="text-label-sm font-label-sm">{pm}</span>
+                                                              </div>
+                                                          </label>
+                                                      }
+                                                  }).collect_view().into_any()
+                                              }
+                                          },
+                                          _ => view! {}.into_any()
+                                      }
+                                  }}
+                              </Suspense>
                           </div>
                       </div>
 
@@ -888,12 +988,44 @@ pub fn StreamerPage() -> impl IntoView {
                                               "Payment success (mock)"
                                           </div>
                                       }.into_any()
-                                  } else {
+                                  } else if status == "REJECTED" {
                                       view! {
-                                          <div class="text-on-surface-variant text-body-sm">
-                                              "Waiting for payment to be ready..."
+                                          <div class="bg-error/10 border border-error/20 text-error rounded-xl px-md py-sm">
+                                              "Payment rejected."
                                           </div>
                                       }.into_any()
+                                  } else {
+                                      if payment_method.get() == "Mock Manual" {
+                                          view! {
+                                              <div class="flex gap-sm mt-sm">
+                                                  <button
+                                                      class="flex-1 bg-secondary text-on-secondary-container py-sm rounded-lg font-bold hover:brightness-110"
+                                                      on:click=move |_| {
+                                                          if let Some(id) = mock_tx_id.get() {
+                                                              accept_action.dispatch(id);
+                                                              mock_tx_status.set("READY_FOR_DISPLAY".to_string());
+                                                              transactions_trigger.update(|n| *n += 1);
+                                                          }
+                                                      }
+                                                  >"Accept"</button>
+                                                  <button
+                                                      class="flex-1 bg-error text-on-error py-sm rounded-lg font-bold hover:brightness-110"
+                                                      on:click=move |_| {
+                                                          if let Some(id) = mock_tx_id.get() {
+                                                              reject_action.dispatch(id);
+                                                              mock_tx_status.set("REJECTED".to_string());
+                                                          }
+                                                      }
+                                                  >"Reject"</button>
+                                              </div>
+                                          }.into_any()
+                                      } else {
+                                          view! {
+                                              <div class="text-on-surface-variant text-body-sm">
+                                                  "Waiting for payment to be ready..."
+                                              </div>
+                                          }.into_any()
+                                      }
                                   }}
                               </div>
                           }.into_any()
@@ -979,7 +1111,7 @@ pub async fn get_streamer(username: String) -> Result<Option<DbStreamer>, Server
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let row = sqlx::query(
-        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session FROM streamers WHERE username = $1"
+        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods FROM streamers WHERE username = $1"
     )
     .bind(username)
     .fetch_optional(&pool)
@@ -999,6 +1131,7 @@ pub async fn get_streamer(username: String) -> Result<Option<DbStreamer>, Server
                 user_id: r.try_get("user_id").unwrap_or(None),
                 overlay_token: r.get("overlay_token"),
                 active_overlay_session: r.try_get("active_overlay_session").unwrap_or(None),
+                payment_methods: r.try_get("payment_methods").unwrap_or_else(|_| vec!["Mock Auto".to_string(), "Mock Manual".to_string()]),
             }))
         }
         None => Ok(None),
@@ -1016,7 +1149,7 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let existing = sqlx::query(
-        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session FROM streamers WHERE user_id = $1"
+        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods FROM streamers WHERE user_id = $1"
     )
     .bind(&user.id)
     .fetch_optional(&pool)
@@ -1036,6 +1169,7 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
             user_id: r.try_get("user_id").unwrap_or(None),
             overlay_token: r.get("overlay_token"),
             active_overlay_session: r.try_get("active_overlay_session").unwrap_or(None),
+            payment_methods: r.try_get("payment_methods").unwrap_or_else(|_| vec!["Mock Auto".to_string(), "Mock Manual".to_string()]),
         }));
     }
 
@@ -1059,12 +1193,12 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
 
     let display_name = if user.name.is_empty() { prefix.clone() } else { user.name.clone() };
     let bio = "New to Glint!".to_string();
-    let avatar_url = format!("https://ui-avatars.com/api/?name={}", urlencoding::encode(&display_name));
+    let avatar_url = format!("https://api.dicebear.com/9.x/avataaars/svg?seed={}", urlencoding::encode(&username));
 
     let row = sqlx::query(
-        "INSERT INTO streamers (username, display_name, avatar_url, bio, is_live, user_id, overlay_token)
-         VALUES ($1, $2, $3, $4, $5, $6, gen_random_uuid())
-         RETURNING id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session"
+        "INSERT INTO streamers (username, display_name, avatar_url, bio, is_live, user_id, overlay_token, payment_methods)
+         VALUES ($1, $2, $3, $4, $5, $6, gen_random_uuid(), $7)
+         RETURNING id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods"
     )
     .bind(&username)
     .bind(&display_name)
@@ -1072,6 +1206,7 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
     .bind(&bio)
     .bind(false)
     .bind(&user.id)
+    .bind(vec!["Mock Auto".to_string(), "Mock Manual".to_string()])
     .fetch_one(&pool)
     .await
     .map_err(|e| ServerFnError::new(format!("Database insert failed: {}", e)))?;
@@ -1086,7 +1221,140 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
         user_id: row.try_get("user_id").unwrap_or(None),
         overlay_token: row.get("overlay_token"),
         active_overlay_session: row.try_get("active_overlay_session").unwrap_or(None),
+        payment_methods: row.try_get("payment_methods").unwrap_or_else(|_| vec!["Mock Auto".to_string(), "Mock Manual".to_string()]),
     }))
+}
+
+#[server(UpdateStreamerProfile, "/api")]
+pub async fn update_streamer_profile(
+    new_display_name: String,
+    new_bio: String,
+    new_username: String,
+    payment_methods: Option<Vec<String>>,
+) -> Result<(), ServerFnError> {
+    let user = match get_me().await? {
+        Some(u) => u,
+        None => return Err(ServerFnError::new("Unauthorized")),
+    };
+
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    // Check if the new username is already taken by a different user
+    let existing_user_with_username: Option<String> = sqlx::query_scalar(
+        "SELECT user_id FROM streamers WHERE username = $1"
+    )
+    .bind(&new_username)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+
+    if let Some(existing_user_id) = existing_user_with_username {
+        if existing_user_id != user.id {
+            return Err(ServerFnError::new("Username is already taken by another user."));
+        }
+    }
+
+    sqlx::query(
+        "UPDATE streamers SET display_name = $1, bio = $2, username = $3, payment_methods = $4 WHERE user_id = $5"
+    )
+    .bind(&new_display_name)
+    .bind(&new_bio)
+    .bind(&new_username)
+    .bind(&payment_methods.unwrap_or_default())
+    .bind(&user.id)
+    .execute(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database update failed: {}", e)))?;
+
+    Ok(())
+}
+
+#[server(GetStreamerAnalytics, "/api")]
+pub async fn get_streamer_analytics(streamer_id: i32, time_range: String) -> Result<StreamerAnalytics, ServerFnError> {
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    let stats = sqlx::query(
+        "SELECT COALESCE(SUM(amount), 0) as total_revenue, COUNT(*) as donation_count 
+         FROM transactions 
+         WHERE streamer_id = $1"
+    )
+    .bind(streamer_id)
+    .fetch_one(&pool)
+    .await;
+    
+    use sqlx::Row;
+    let (total_revenue, donation_count) = match stats {
+        Ok(r) => (r.try_get::<f64, _>("total_revenue").unwrap_or(0.0), r.try_get::<i64, _>("donation_count").unwrap_or(0)),
+        Err(_) => (0.0, 0),
+    };
+
+    let top_donors = sqlx::query(
+        "SELECT donor_name, SUM(amount) as total_donated 
+         FROM transactions 
+         WHERE streamer_id = $1
+         GROUP BY donor_name 
+         ORDER BY total_donated DESC 
+         LIMIT 5"
+    )
+    .bind(streamer_id)
+    .fetch_all(&pool)
+    .await
+    .unwrap_or_default();
+
+    let donors = top_donors.into_iter().map(|r| {
+        (r.get::<String, _>("donor_name"), r.get::<f64, _>("total_donated"))
+    }).collect();
+
+    let revenue_time = if time_range == "day" {
+        sqlx::query(
+            "SELECT TO_CHAR(created_at, 'HH24:00') as date, SUM(amount) as daily_revenue
+             FROM transactions 
+             WHERE streamer_id = $1 AND created_at >= NOW() - INTERVAL '24 hours'
+             GROUP BY TO_CHAR(created_at, 'HH24:00')
+             ORDER BY date ASC"
+        )
+        .bind(streamer_id)
+        .fetch_all(&pool)
+        .await
+        .unwrap_or_default()
+    } else if time_range == "month" {
+        sqlx::query(
+            "SELECT TO_CHAR(created_at, 'MM-DD') as date, SUM(amount) as daily_revenue
+             FROM transactions 
+             WHERE streamer_id = $1 AND created_at >= NOW() - INTERVAL '30 days'
+             GROUP BY TO_CHAR(created_at, 'MM-DD')
+             ORDER BY date ASC"
+        )
+        .bind(streamer_id)
+        .fetch_all(&pool)
+        .await
+        .unwrap_or_default()
+    } else { // "week"
+        sqlx::query(
+            "SELECT TO_CHAR(created_at, 'MM-DD') as date, SUM(amount) as daily_revenue
+             FROM transactions 
+             WHERE streamer_id = $1 AND created_at >= NOW() - INTERVAL '7 days'
+             GROUP BY TO_CHAR(created_at, 'MM-DD')
+             ORDER BY date ASC"
+        )
+        .bind(streamer_id)
+        .fetch_all(&pool)
+        .await
+        .unwrap_or_default()
+    };
+
+    let revenue_over_time: Vec<(String, f64)> = revenue_time.into_iter().map(|r| {
+        (r.get::<String, _>("date"), r.get::<f64, _>("daily_revenue"))
+    }).collect();
+
+    Ok(StreamerAnalytics {
+        total_revenue,
+        donation_count,
+        top_donors: donors,
+        revenue_over_time,
+    })
 }
 
 #[server(GetAllStreamers, "/api")]
@@ -1095,7 +1363,7 @@ pub async fn get_all_streamers() -> Result<Vec<DbStreamer>, ServerFnError> {
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let rows = sqlx::query(
-        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session FROM streamers ORDER BY is_live DESC, id DESC"
+        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods FROM streamers ORDER BY is_live DESC, id DESC"
     )
     .fetch_all(&pool)
     .await
@@ -1113,6 +1381,7 @@ pub async fn get_all_streamers() -> Result<Vec<DbStreamer>, ServerFnError> {
             user_id: r.try_get("user_id").unwrap_or(None),
             overlay_token: r.get("overlay_token"),
             active_overlay_session: r.try_get("active_overlay_session").unwrap_or(None),
+            payment_methods: r.try_get("payment_methods").unwrap_or_else(|_| vec!["Mock Auto".to_string(), "Mock Manual".to_string()]),
         }
     }).collect();
 
@@ -1192,6 +1461,8 @@ pub async fn create_mock_payment(
     .await?;
 
     let (display_qr, display_url) = match payment_method.as_str() {
+        "Mock Auto" => (None, Some(format!("https://example.com/mock-auto?tx_id={tx_id}"))),
+        "Mock Manual" => (None, Some(format!("https://example.com/mock-manual?tx_id={tx_id}"))),
         "Crypto" => (Some(format!("MOCK-QR:tx_id={tx_id};amount={amount:.2}")), None),
         "PayPal" => (None, Some(format!("https://example.com/mock-pay?provider=paypal&tx_id={tx_id}"))),
         _ => (None, Some(format!("https://example.com/mock-pay?provider=card&tx_id={tx_id}"))),
@@ -1209,16 +1480,19 @@ pub async fn create_mock_payment(
         let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
             .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
+        let pm_clone = payment_method.clone();
         let delay_ms = 2000u64 + (chrono::Utc::now().timestamp_subsec_millis() as u64 % 3001u64);
         tokio::spawn(async move {
-            sleep(Duration::from_millis(delay_ms)).await;
-            if let Some(state) = mock_payments::MOCK_TXS.write().await.get_mut(&tx_id) {
-                state.status = "READY_FOR_DISPLAY".to_string();
+            if pm_clone != "Mock Manual" {
+                sleep(Duration::from_millis(delay_ms)).await;
+                if let Some(state) = mock_payments::MOCK_TXS.write().await.get_mut(&tx_id) {
+                    state.status = "READY_FOR_DISPLAY".to_string();
+                }
+                let _ = sqlx::query("UPDATE transactions SET status = 'READY_FOR_DISPLAY' WHERE id = $1")
+                    .bind(tx_id)
+                    .execute(&pool)
+                    .await;
             }
-            let _ = sqlx::query("UPDATE transactions SET status = 'READY_FOR_DISPLAY' WHERE id = $1")
-                .bind(tx_id)
-                .execute(&pool)
-                .await;
         });
     }
 
@@ -1228,6 +1502,44 @@ pub async fn create_mock_payment(
         display_qr,
         display_url,
     })
+}
+
+#[server(AcceptMockPayment, "/api")]
+pub async fn accept_mock_payment(tx_id: i32) -> Result<(), ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        if let Some(state) = mock_payments::MOCK_TXS.write().await.get_mut(&tx_id) {
+            state.status = "READY_FOR_DISPLAY".to_string();
+        }
+
+        let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+            .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+            
+        let _ = sqlx::query("UPDATE transactions SET status = 'READY_FOR_DISPLAY' WHERE id = $1")
+            .bind(tx_id)
+            .execute(&pool)
+            .await;
+    }
+    Ok(())
+}
+
+#[server(RejectMockPayment, "/api")]
+pub async fn reject_mock_payment(tx_id: i32) -> Result<(), ServerFnError> {
+    #[cfg(feature = "ssr")]
+    {
+        if let Some(state) = mock_payments::MOCK_TXS.write().await.get_mut(&tx_id) {
+            state.status = "REJECTED".to_string();
+        }
+
+        let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+            .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+            
+        let _ = sqlx::query("UPDATE transactions SET status = 'REJECTED' WHERE id = $1")
+            .bind(tx_id)
+            .execute(&pool)
+            .await;
+    }
+    Ok(())
 }
 
 #[server(GetMockPaymentStatus, "/api")]
