@@ -1,5 +1,5 @@
 use leptos::prelude::*;
-use crate::app::{get_or_create_streamer, get_dashboard_transactions};
+use crate::app::{get_or_create_streamer, get_dashboard_transactions, Header, Footer};
 
 #[component]
 pub fn DashboardPage() -> impl IntoView {
@@ -16,9 +16,9 @@ pub fn DashboardPage() -> impl IntoView {
                     match res {
                         Ok(Some(streamer)) => {
                             let _profile_url = format!("/streamer/{}", streamer.username);
-                            let _overlay_url = format!("http://localhost:3000/overlay/{}", streamer.username);
+                            let overlay_url = format!("/overlay/{}", streamer.username);
                             let _donate_url = format!("http://localhost:3000/streamer/{}", streamer.username);
-                            let avatar_url = if streamer.avatar_url.is_empty() { 
+                            let _avatar_url = if streamer.avatar_url.is_empty() { 
                                 "https://api.dicebear.com/9.x/avataaars/svg".to_string() 
                             } else { 
                                 streamer.avatar_url.clone() 
@@ -26,28 +26,7 @@ pub fn DashboardPage() -> impl IntoView {
 
                             view! {
                                 <div class="bg-background text-on-surface font-body-md antialiased overflow-x-hidden">
-                                    // TopAppBar
-                                    <header class="fixed top-0 w-full z-50 bg-surface/60 backdrop-blur-xl border-b border-white/20 shadow-sm flex justify-between items-center px-margin-desktop h-20">
-                                        <div class="flex items-center gap-lg">
-                                            <span class="text-headline-md font-headline-md font-extrabold text-primary tracking-tighter">"Glint"</span>
-                                            <div class="hidden md:flex gap-md items-center">
-                                                <a class="text-primary font-bold border-b-2 border-primary pb-1 text-label-md font-label-md" href="#">"Explore"</a>
-                                                <a class="text-on-surface-variant font-medium hover:text-primary transition-colors text-label-md font-label-md" href="#">"Creators"</a>
-                                                <a class="text-on-surface-variant font-medium hover:text-primary transition-colors text-label-md font-label-md" href="#">"Leaderboard"</a>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center gap-md">
-                                            <button class="text-on-surface-variant hover:text-primary transition-all active:scale-95">
-                                                <span class="material-symbols-outlined">"notifications"</span>
-                                            </button>
-                                            <button class="text-on-surface-variant hover:text-primary transition-all active:scale-95">
-                                                <span class="material-symbols-outlined">"settings"</span>
-                                            </button>
-                                            <div class="w-10 h-10 rounded-full overflow-hidden border border-primary/30">
-                                                <img alt="User profile photo" class="w-full h-full object-cover" src=avatar_url />
-                                            </div>
-                                        </div>
-                                    </header>
+                                    <Header />
                                     
                                     // SideNavBar
                                     <aside class="fixed left-0 top-20 h-[calc(100vh-80px)] w-64 bg-surface-container-low/40 backdrop-blur-md border-r border-white/10 hidden md:flex flex-col p-md gap-base z-40">
@@ -90,43 +69,77 @@ pub fn DashboardPage() -> impl IntoView {
                                     </aside>
                                     
                                     // Main Content
-                                    <main class="md:ml-64 pt-32 px-margin-mobile md:px-margin-desktop pb-xl min-h-screen">
+                                    <main class="md:ml-64 pt-32 px-margin-mobile md:px-margin-desktop pb-24 md:pb-xl min-h-screen">
                                         <div class="max-w-7xl mx-auto">
                                             // Welcome Header
                                             <div class="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
-                                                <div>
-                                                    <h1 class="text-headline-lg font-headline-lg text-on-surface">"Streamer Dashboard"</h1>
-                                                    <p class="text-body-md font-body-md text-on-surface-variant">
-                                                        "Welcome back, " {streamer.display_name.clone()} ". Your creator hub is ready."
-                                                    </p>
+                                            <div>
+                                                <h1 data-testid="streamer-dashboard-header" class="text-headline-lg font-headline-lg text-on-surface">"Streamer Dashboard"</h1>
+                                                <p class="text-body-md font-body-md text-on-surface-variant">
+                                                    "Welcome back, " {streamer.display_name.clone()} ". Your creator hub is ready."
+                                                </p>
+                                            </div>
+                                            <a
+                                                class="inline-flex items-center gap-xs px-md py-sm rounded-xl bg-primary-container text-on-primary-container font-bold hover:brightness-110 transition-all active:scale-[0.98]"
+                                                href=overlay_url.clone()
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                <span class="material-symbols-outlined text-[20px]">"open_in_new"</span>
+                                                <span>"Open Overlay"</span>
+                                            </a>
+                                        </div>
+
+                                        <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-md md:p-xl mb-lg">
+                                            <div class="flex flex-col gap-sm">
+                                                <div class="flex items-center gap-sm">
+                                                    <span class="material-symbols-outlined text-primary">"link"</span>
+                                                    <h2 class="text-headline-md font-headline-md text-on-surface">"Overlay URL"</h2>
+                                                </div>
+                                                <p class="text-body-md text-on-surface-variant mb-sm">
+                                                    "Copy this secure URL and paste it as a Browser Source in OBS. Only one instance can be active at a time. If you open it elsewhere, the previous session will be revoked."
+                                                </p>
+                                                <div class="flex items-center gap-sm bg-black/40 border border-white/10 rounded-xl p-sm">
+                                                    <code class="flex-1 text-on-surface text-label-md font-mono overflow-hidden text-ellipsis whitespace-nowrap px-sm">
+                                                        "http://localhost:3000" {overlay_url.clone()}
+                                                    </code>
                                                 </div>
                                             </div>
+                                        </section>
 
-                                            <DonationHistory streamer_id={streamer.id} />
-                                        </div>
-                                    </main>
+                                        <DonationHistory streamer_id={streamer.id} />
+                                    </div>
+                                </main>
 
-                                    // Footer Component
-                                    <footer class="bg-surface-dim border-t border-surface-container-highest w-full py-lg">
-                                        <div class="max-w-7xl mx-auto px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-md">
-                                            <div class="flex flex-col gap-xs items-center md:items-start">
-                                                <span class="text-headline-sm font-headline-sm text-primary">"Glint"</span>
-                                                <p class="text-body-md font-body-md text-on-surface-variant text-center md:text-left">"© 2024 Glint Technologies. Optimism in every transaction."</p>
-                                            </div>
-                                            <div class="flex gap-md flex-wrap justify-center">
-                                                <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-secondary transition-all" href="#">"Support"</a>
-                                                <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-secondary transition-all" href="#">"Privacy Policy"</a>
-                                                <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-secondary transition-all" href="#">"Terms of Service"</a>
-                                                <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-secondary transition-all" href="#">"Discord"</a>
-                                                <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-secondary transition-all" href="#">"Instagram"</a>
-                                            </div>
-                                        </div>
-                                    </footer>
+                                    // Mobile Bottom Navigation
+                                    <nav class="fixed bottom-0 w-full bg-surface-container-low/90 backdrop-blur-xl border-t border-white/10 flex justify-around items-center h-16 z-50 md:hidden pb-safe">
+                                        <a href="#" class="flex flex-col items-center gap-1 text-primary w-16">
+                                            <span class="material-symbols-outlined text-[24px]">"dashboard"</span>
+                                            <span class="text-[10px] font-bold leading-none">"Dashboard"</span>
+                                        </a>
+                                        <a href="#" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16">
+                                            <span class="material-symbols-outlined text-[24px]">"monitoring"</span>
+                                            <span class="text-[10px] font-medium leading-none">"Analytics"</span>
+                                        </a>
+                                        <button class="relative -top-5 w-12 h-12 bg-gradient-to-tr from-primary to-primary-container rounded-full shadow-lg shadow-primary/30 flex items-center justify-center text-on-primary active:scale-95 transition-transform border-4 border-background">
+                                            <span class="material-symbols-outlined text-[24px]">"videocam"</span>
+                                        </button>
+                                        <a href="#" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16">
+                                            <span class="material-symbols-outlined text-[24px]">"payments"</span>
+                                            <span class="text-[10px] font-medium leading-none">"Payments"</span>
+                                        </a>
+                                        <a href="#" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16">
+                                            <span class="material-symbols-outlined text-[24px]">"settings"</span>
+                                            <span class="text-[10px] font-medium leading-none">"Settings"</span>
+                                        </a>
+                                    </nav>
+
+                                    <Footer />
 
                                     // Interactive Layer: Atmospheric Glow
                                     <div class="fixed top-0 left-0 w-full h-full -z-10 pointer-events-none">
-                                        <div class="absolute top-[10%] left-[20%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] animate-pulse"></div>
-                                        <div class="absolute bottom-[20%] right-[10%] w-[400px] h-[400px] bg-secondary/5 rounded-full blur-[100px]"></div>
+                                        <div class="js-glow absolute top-[10%] left-[20%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] animate-pulse"></div>
+                                        <div class="js-glow absolute bottom-[20%] right-[10%] w-[400px] h-[400px] bg-secondary/5 rounded-full blur-[100px]"></div>
                                     </div>
                                     
                                     <script>
@@ -169,25 +182,29 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
     #[cfg(feature = "hydrate")]
     {
         use leptos::prelude::Effect;
-        use leptos::prelude::StoredValue;
-        use gloo_timers::callback::Interval;
+        use leptos::wasm_bindgen::closure::Closure;
+        use leptos::wasm_bindgen::JsCast;
 
-        let interval_handle: StoredValue<Option<Interval>, leptos::prelude::LocalStorage> = StoredValue::new_local(None);
-
-        Effect::new(move || {
-            let is_auto = auto_reload.get();
-            let period = reload_interval.get();
-
-            interval_handle.update_value(|handle| {
-                *handle = None; 
-            });
-
-            if is_auto {
-                let ms = period * 1000;
-                let new_interval = Interval::new(ms as u32, move || {
-                    _set_reload_trigger.update(|n| *n += 1);
+        Effect::new(move |_| {
+            if auto_reload.get() {
+                let interval = reload_interval.get();
+                let set_rt = _set_reload_trigger;
+                
+                let window = web_sys::window().unwrap();
+                let closure = Closure::wrap(Box::new(move || {
+                    set_rt.update(|n| *n += 1);
+                }) as Box<dyn FnMut()>);
+                
+                let id = window.set_interval_with_callback_and_timeout_and_arguments_0(
+                    closure.as_ref().unchecked_ref(),
+                    (interval * 1000) as i32,
+                ).unwrap();
+                
+                closure.forget();
+                
+                leptos::prelude::on_cleanup(move || {
+                    web_sys::window().unwrap().clear_interval_with_handle(id);
                 });
-                interval_handle.set_value(Some(new_interval));
             }
         });
     }
@@ -195,9 +212,9 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
     let tx_resource = LocalResource::new(move || {
         let p = page.get();
         let ps = page_size.get();
-        let _ = reload_trigger.get();
+        let trig = reload_trigger.get();
         async move {
-            get_dashboard_transactions(streamer_id, p, ps).await
+            get_dashboard_transactions(streamer_id, p, ps, trig).await
         }
     });
 
@@ -294,7 +311,7 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
                                         } else {
                                             view! {
                                                 {txs.into_iter().map(|tx| view! {
-                                                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors group">
+                                                    <tr data-testid="donation-row" class="border-b border-white/5 hover:bg-white/5 transition-colors group">
                                                         <td class="py-md pr-md">
                                                             <div class="flex items-center gap-sm">
                                                                 <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">

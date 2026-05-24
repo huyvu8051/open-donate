@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {},
+  "type": "module",
+  "scripts": {
+    "test:docker": "docker run --rm -v \"$(pwd)/..\":/app -w /app/end2end mcr.microsoft.com/playwright:v1.44.1-jammy bash run-docker.sh"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",

@@ -7,7 +7,7 @@ export class DashboardPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.getStartedHeader = page.locator('text=Ready to get started?');
+    this.getStartedHeader = page.locator('text=Streamer Dashboard');
     this.quickLinksContainer = page.locator('.glass-card').first();
   }
 

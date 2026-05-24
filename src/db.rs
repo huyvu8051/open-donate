@@ -9,6 +9,8 @@ pub struct DbStreamer {
     pub bio: String,
     pub is_live: bool,
     pub user_id: Option<String>,
+    pub overlay_token: String,
+    pub active_overlay_session: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -19,6 +21,7 @@ pub struct DbTransaction {
     pub amount: f64,
     pub message: Option<String>,
     pub payment_method: String,
+    pub status: String,
     pub created_at: String,
 }
 

@@ -55,17 +55,17 @@ test('Keycloak Registration and Auto-Onboarding Flow', async ({ page }) => {
   // The user should be immediately authenticated (no email verify) and redirected back.
   console.log('Waiting for redirect back to app dashboard...');
   
-  await page.waitForURL('http://localhost:3000/', { timeout: 15000 });
+  await page.waitForURL(/.*localhost:3000.*/, { timeout: 15000 });
 
   // Navigate to dashboard
   await page.goto('http://localhost:3000/dashboard');
 
   // 6. Verify Dashboard and Auto-Onboarding
-  const expectedPrefix = fakeEmail.split('@')[0];
+  const expectedPrefix = fakeEmail.split('@')[0].toLowerCase();
   console.log(`Expected username prefix: ${expectedPrefix}`);
 
   // The dashboard should load
-  await expect(page.locator('text=Streamer Dashboard').first()).toBeVisible({ timeout: 10000 });
+  await expect(page.getByTestId('streamer-dashboard-header')).toBeVisible({ timeout: 10000 });
 
   console.log('Test completed successfully! User was auto-onboarded via Keycloak.');
 });

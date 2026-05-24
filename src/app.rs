@@ -2,7 +2,7 @@ use leptos::prelude::*;
 use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
 use leptos_router::{
     components::{Route, Router, Routes},
-    hooks::use_params_map,
+    hooks::{use_location, use_params_map},
     ParamSegment, StaticSegment,
 };
 use crate::auth::User;
@@ -21,6 +21,16 @@ pub struct MockPaymentInit {
 pub struct MockPaymentStatus {
     pub tx_id: i32,
     pub status: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct LeaderboardEntry {
+    pub streamer_id: i32,
+    pub username: String,
+    pub display_name: String,
+    pub avatar_url: String,
+    pub total_amount: f64,
+    pub donation_count: i64,
 }
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
@@ -60,8 +70,10 @@ pub fn App() -> impl IntoView {
             <Routes fallback=|| "Page not found.".into_view()>
                 <Route path=StaticSegment("") view=LandingPage/>
                 <Route path=StaticSegment("explore") view=ExplorePage/>
+                <Route path=StaticSegment("leaderboard") view=LeaderboardPage/>
                 <Route path=StaticSegment("dashboard") view=crate::dashboard::DashboardPage/>
                 <Route path=(StaticSegment("streamer"), ParamSegment("username")) view=StreamerPage/>
+                <Route path=(StaticSegment("overlay"), ParamSegment("token")) view=crate::overlay::OverlayPage/>
             </Routes>
         </Router>
     }
@@ -72,14 +84,30 @@ pub fn Header() -> impl IntoView {
     let user_resource = use_context::<Resource<Result<Option<User>, ServerFnError>>>()
         .expect("User resource must be provided");
 
+    let location = use_location();
+    let nav_class = move |href: &'static str| {
+        let path = location.pathname.get();
+        let active = if href == "/" {
+            path == "/"
+        } else {
+            path.starts_with(href)
+        };
+
+        if active {
+            "text-primary font-bold border-b-2 border-primary pb-1 text-label-md font-label-md hover:text-primary transition-colors"
+        } else {
+            "text-on-surface-variant font-medium text-label-md font-label-md hover:text-primary transition-colors"
+        }
+    };
+
     view! {
         <header class="fixed top-0 w-full z-50 bg-surface/60 backdrop-blur-xl border-b border-white/20 shadow-sm h-20 flex justify-between items-center px-margin-desktop">
             <div class="flex items-center gap-md">
                 <a href="/" class="text-headline-md font-headline-md font-extrabold text-primary tracking-tighter">"Glint"</a>
                 <nav class="hidden md:flex items-center gap-md ml-lg">
-                    <a class="text-primary font-bold border-b-2 border-primary pb-1 text-label-md font-label-md hover:text-primary transition-colors" href="/explore">"Explore"</a>
-                    <a class="text-on-surface-variant font-medium text-label-md font-label-md hover:text-primary transition-colors" href="#">"Creators"</a>
-                    <a class="text-on-surface-variant font-medium text-label-md font-label-md hover:text-primary transition-colors" href="#">"Leaderboard"</a>
+                    <a class=move || nav_class("/") href="/">"Explore"</a>
+                    <a class=move || nav_class("/explore") href="/explore">"Creators"</a>
+                    <a class=move || nav_class("/leaderboard") href="/leaderboard">"Leaderboard"</a>
                 </nav>
             </div>
             <div class="flex items-center gap-md">
@@ -132,8 +160,8 @@ pub fn Footer() -> impl IntoView {
 pub fn Hero() -> impl IntoView {
     view! {
         <section class="relative min-h-[921px] flex flex-col items-center justify-center text-center px-margin-mobile md:px-margin-desktop overflow-hidden">
-            <div class="absolute top-1/4 -left-20 w-96 h-96 bg-primary/20 rounded-full blur-[120px]"></div>
-            <div class="absolute bottom-1/4 -right-20 w-96 h-96 bg-secondary/10 rounded-full blur-[120px]"></div>
+            <div class="js-glow absolute top-1/4 -left-20 w-96 h-96 bg-primary/20 rounded-full blur-[120px]"></div>
+            <div class="js-glow absolute bottom-1/4 -right-20 w-96 h-96 bg-secondary/10 rounded-full blur-[120px]"></div>
             <div class="relative z-10 max-w-4xl mx-auto space-y-md">
                 <span class="inline-block px-sm py-xs bg-surface-container-highest/40 backdrop-blur-md rounded-full border border-white/10 text-secondary text-label-md font-label-md">
                     "Future of Digital Support"
@@ -254,6 +282,80 @@ pub fn ExplorePage() -> impl IntoView {
             </div>
         </main>
         <Footer/>
+    }
+}
+
+#[component]
+pub fn LeaderboardPage() -> impl IntoView {
+    let leaderboard_resource = Resource::new(|| (), |_| get_streamer_leaderboard());
+
+    view! {
+        <Header/>
+        <main class="pt-24 pb-xl px-margin-mobile md:px-margin-desktop min-h-screen">
+            <div class="max-w-6xl mx-auto flex flex-col gap-xl">
+                <div class="flex flex-col gap-xs text-center">
+                    <h1 class="text-display-sm md:text-display-md font-display-md font-extrabold text-on-surface tracking-tight">
+                        "Leaderboard"
+                    </h1>
+                    <p class="text-headline-sm font-headline-sm text-on-surface-variant max-w-2xl mx-auto">
+                        "Top creators by total donations."
+                    </p>
+                </div>
+
+                <Suspense fallback=move || view! { <div class="text-center text-on-surface-variant mt-xl">"Loading leaderboard..."</div> }>
+                    {move || {
+                        leaderboard_resource.get().map(|res| match res {
+                            Ok(entries) => {
+                                if entries.is_empty() {
+                                    view! {
+                                        <div class="text-center text-on-surface-variant mt-xl">"No donations yet."</div>
+                                    }.into_any()
+                                } else {
+                                    view! {
+                                        <div class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
+                                            <div class="grid grid-cols-12 gap-2 px-5 py-4 text-on-surface-variant text-label-sm font-label-sm border-b border-white/10">
+                                                <div class="col-span-1">"#"</div>
+                                                <div class="col-span-6">"Creator"</div>
+                                                <div class="col-span-2 text-right">"Donations"</div>
+                                                <div class="col-span-3 text-right">"Total"</div>
+                                            </div>
+
+                                            <div class="divide-y divide-white/10">
+                                                {entries.into_iter().enumerate().map(|(idx, e)| {
+                                                    let avatar = if e.avatar_url.is_empty() { "https://api.dicebear.com/9.x/avataaars/svg".to_string() } else { e.avatar_url.clone() };
+                                                    let name = if e.display_name.is_empty() { e.username.clone() } else { e.display_name.clone() };
+                                                    let profile_url = format!("/streamer/{}", e.username);
+                                                    let rank = (idx + 1).to_string();
+                                                    view! {
+                                                        <a href=profile_url class="grid grid-cols-12 gap-2 px-5 py-4 hover:bg-white/5 transition-colors items-center">
+                                                            <div class="col-span-1 text-on-surface font-semibold">{rank}</div>
+                                                            <div class="col-span-6 flex items-center gap-3">
+                                                                <img src=avatar class="w-10 h-10 rounded-full object-cover bg-surface-container-highest border border-white/10"/>
+                                                                <div class="flex flex-col">
+                                                                    <div class="text-on-surface font-semibold">{name}</div>
+                                                                    <div class="text-on-surface-variant text-label-sm">@{e.username}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-span-2 text-right text-on-surface">{e.donation_count}</div>
+                                                            <div class="col-span-3 text-right text-secondary font-extrabold">
+                                                                "$" {format!("{:.2}", e.total_amount)}
+                                                            </div>
+                                                        </a>
+                                                    }
+                                                }).collect_view()}
+                                            </div>
+                                        </div>
+                                    }.into_any()
+                                }
+                            }
+                            Err(e) => view! {
+                                <div class="text-center text-error mt-xl">{format!("Failed to load leaderboard: {e}")}</div>
+                            }.into_any(),
+                        })
+                    }}
+                </Suspense>
+            </div>
+        </main>
     }
 }
 
@@ -406,7 +508,7 @@ pub fn LandingPage() -> impl IntoView {
                 const x = e.clientX / window.innerWidth;
                 const y = e.clientY / window.innerHeight;
                 
-                const glows = document.querySelectorAll('.blur-[120px]');
+                const glows = document.querySelectorAll('.js-glow');
                 glows.forEach((glow, index) => {
                     const speed = (index + 1) * 20;
                     glow.style.transform = `translate(${x * speed}px, ${y * speed}px)`;
@@ -420,7 +522,7 @@ pub fn LandingPage() -> impl IntoView {
 pub fn StreamerPage() -> impl IntoView {
     let params = use_params_map();
     let username = move || {
-        params.read().get("username").unwrap_or_default()
+        params.with_untracked(|p| p.get("username").unwrap_or_default())
     };
 
     let amount = RwSignal::new("25".to_string());
@@ -443,23 +545,27 @@ pub fn StreamerPage() -> impl IntoView {
         leptos::prelude::LocalStorage,
     > = StoredValue::new_local(None);
 
-    // Load profile info from database using URL param
-    let streamer_resource = LocalResource::new(move || {
-        let uname = username();
-        async move { get_streamer(uname).await }
-    });
+    // Load profile info from database using URL param (SSR-friendly)
+    let streamer_resource = Resource::new(
+        move || username(),
+        |uname| async move {
+            if uname.is_empty() {
+                return Ok(None);
+            }
+            get_streamer(uname).await
+        },
+    );
 
-    // Load recent transactions
-    let transactions_resource = LocalResource::new(move || {
-        transactions_trigger.track();
-        let uname = username();
-        async move {
+    // Load recent transactions (SSR-friendly)
+    let transactions_resource = Resource::new(
+        move || (username(), transactions_trigger.get()),
+        |(uname, _)| async move {
             if uname.is_empty() {
                 return Ok(vec![]);
             }
             get_recent_transactions(uname).await
-        }
-    });
+        },
+    );
 
     let payment_action = Action::new(move |_: &()| {
         let amt_val = amount.get_untracked().parse::<f64>().unwrap_or(0.0);
@@ -547,6 +653,18 @@ pub fn StreamerPage() -> impl IntoView {
     };
 
     view! {
+        <Suspense fallback=move || view! { <Title text="Glint | Donate"/> }>
+            {move || {
+                match streamer_resource.get() {
+                    Some(Ok(Some(s))) => {
+                        let display = if s.display_name.is_empty() { s.username } else { s.display_name };
+                        let title = format!("Donate to {display} | Glint");
+                        view! { <Title text=title/> }.into_any()
+                    }
+                    _ => view! { <Title text="Glint | Donate"/> }.into_any(),
+                }
+            }}
+        </Suspense>
         <Header/>
         <main class="pt-24 pb-lg px-margin-mobile md:px-margin-desktop max-w-4xl mx-auto flex-1 w-full flex flex-col gap-lg animate-fade-in">
             // Streamer Profile Header
@@ -861,7 +979,7 @@ pub async fn get_streamer(username: String) -> Result<Option<DbStreamer>, Server
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let row = sqlx::query(
-        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id FROM streamers WHERE username = $1"
+        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session FROM streamers WHERE username = $1"
     )
     .bind(username)
     .fetch_optional(&pool)
@@ -879,6 +997,8 @@ pub async fn get_streamer(username: String) -> Result<Option<DbStreamer>, Server
                 bio: r.get("bio"),
                 is_live: r.get("is_live"),
                 user_id: r.try_get("user_id").unwrap_or(None),
+                overlay_token: r.get("overlay_token"),
+                active_overlay_session: r.try_get("active_overlay_session").unwrap_or(None),
             }))
         }
         None => Ok(None),
@@ -896,7 +1016,7 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let existing = sqlx::query(
-        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id FROM streamers WHERE user_id = $1"
+        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session FROM streamers WHERE user_id = $1"
     )
     .bind(&user.id)
     .fetch_optional(&pool)
@@ -914,6 +1034,8 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
             bio: r.get("bio"),
             is_live: r.get("is_live"),
             user_id: r.try_get("user_id").unwrap_or(None),
+            overlay_token: r.get("overlay_token"),
+            active_overlay_session: r.try_get("active_overlay_session").unwrap_or(None),
         }));
     }
 
@@ -940,9 +1062,9 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
     let avatar_url = format!("https://ui-avatars.com/api/?name={}", urlencoding::encode(&display_name));
 
     let row = sqlx::query(
-        "INSERT INTO streamers (username, display_name, avatar_url, bio, is_live, user_id)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING id, username, display_name, avatar_url, bio, is_live, user_id"
+        "INSERT INTO streamers (username, display_name, avatar_url, bio, is_live, user_id, overlay_token)
+         VALUES ($1, $2, $3, $4, $5, $6, gen_random_uuid())
+         RETURNING id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session"
     )
     .bind(&username)
     .bind(&display_name)
@@ -962,6 +1084,8 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
         bio: row.get("bio"),
         is_live: row.get("is_live"),
         user_id: row.try_get("user_id").unwrap_or(None),
+        overlay_token: row.get("overlay_token"),
+        active_overlay_session: row.try_get("active_overlay_session").unwrap_or(None),
     }))
 }
 
@@ -971,7 +1095,7 @@ pub async fn get_all_streamers() -> Result<Vec<DbStreamer>, ServerFnError> {
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let rows = sqlx::query(
-        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id FROM streamers ORDER BY is_live DESC, id DESC"
+        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session FROM streamers ORDER BY is_live DESC, id DESC"
     )
     .fetch_all(&pool)
     .await
@@ -987,6 +1111,8 @@ pub async fn get_all_streamers() -> Result<Vec<DbStreamer>, ServerFnError> {
             bio: r.get("bio"),
             is_live: r.get("is_live"),
             user_id: r.try_get("user_id").unwrap_or(None),
+            overlay_token: r.get("overlay_token"),
+            active_overlay_session: r.try_get("active_overlay_session").unwrap_or(None),
         }
     }).collect();
 
@@ -1017,13 +1143,14 @@ pub async fn create_donation(
     };
 
     let row = sqlx::query(
-        "INSERT INTO transactions (streamer_id, donor_name, amount, message, payment_method)\n         VALUES ($1, $2, $3, $4, $5)\n         RETURNING id"
+        "INSERT INTO transactions (streamer_id, donor_name, amount, message, payment_method, status)\n         VALUES ($1, $2, $3, $4, $5, $6)\n         RETURNING id"
     )
     .bind(streamer_id)
     .bind(donor)
     .bind(amount)
     .bind(message_opt)
     .bind(payment_method)
+    .bind("INITIALIZE")
     .fetch_one(&pool)
     .await
     .map_err(|e| ServerFnError::new(format!("Database insert failed: {}", e)))?;
@@ -1079,12 +1206,19 @@ pub async fn create_mock_payment(
             .await
             .insert(tx_id, mock_payments::MockTxState { status: "INITIALIZE".to_string() });
 
+        let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+            .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
         let delay_ms = 2000u64 + (chrono::Utc::now().timestamp_subsec_millis() as u64 % 3001u64);
         tokio::spawn(async move {
             sleep(Duration::from_millis(delay_ms)).await;
             if let Some(state) = mock_payments::MOCK_TXS.write().await.get_mut(&tx_id) {
                 state.status = "READY_FOR_DISPLAY".to_string();
             }
+            let _ = sqlx::query("UPDATE transactions SET status = 'READY_FOR_DISPLAY' WHERE id = $1")
+                .bind(tx_id)
+                .execute(&pool)
+                .await;
         });
     }
 
@@ -1126,7 +1260,7 @@ pub async fn get_recent_transactions(username: String) -> Result<Vec<DbTransacti
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let rows = sqlx::query(
-        "SELECT t.id, t.streamer_id, t.donor_name, t.amount, t.message, t.payment_method, TO_CHAR(t.created_at, 'YYYY-MM-DD HH:MI AM') as formatted_date 
+        "SELECT t.id, t.streamer_id, t.donor_name, t.amount, t.message, t.payment_method, t.status, TO_CHAR(t.created_at, 'YYYY-MM-DD HH:MI AM') as formatted_date 
          FROM transactions t
          JOIN streamers s ON t.streamer_id = s.id
          WHERE s.username = $1 
@@ -1147,6 +1281,7 @@ pub async fn get_recent_transactions(username: String) -> Result<Vec<DbTransacti
             amount: r.get("amount"),
             message: r.get("message"),
             payment_method: r.get("payment_method"),
+            status: r.get("status"),
             created_at: r.get("formatted_date"),
         }
     }).collect();
@@ -1155,21 +1290,20 @@ pub async fn get_recent_transactions(username: String) -> Result<Vec<DbTransacti
 }
 
 #[server(GetDashboardTransactions, "/api")]
-pub async fn get_dashboard_transactions(streamer_id: i32, page: i64, page_size: i64) -> Result<(Vec<DbTransaction>, i64), ServerFnError> {
+pub async fn get_dashboard_transactions(streamer_id: i32, page: i64, page_size: i64, _trigger: i32) -> Result<(Vec<DbTransaction>, i64), ServerFnError> {
     let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let offset = (page - 1) * page_size;
 
-    let count_row = sqlx::query!("SELECT COUNT(*) as count FROM transactions WHERE streamer_id = $1", streamer_id)
+    let total_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM transactions WHERE streamer_id = $1")
+        .bind(streamer_id)
         .fetch_one(&pool)
         .await
         .map_err(|e| ServerFnError::new(format!("Database count failed: {}", e)))?;
-        
-    let total_count = count_row.count.unwrap_or(0);
 
     let rows = sqlx::query(
-        "SELECT t.id, t.streamer_id, t.donor_name, t.amount, t.message, t.payment_method, TO_CHAR(t.created_at, 'YYYY-MM-DD HH:MI AM') as formatted_date 
+        "SELECT t.id, t.streamer_id, t.donor_name, t.amount, t.message, t.payment_method, t.status, TO_CHAR(t.created_at, 'YYYY-MM-DD HH:MI AM') as formatted_date 
          FROM transactions t
          WHERE t.streamer_id = $1 
          ORDER BY t.id DESC 
@@ -1191,6 +1325,7 @@ pub async fn get_dashboard_transactions(streamer_id: i32, page: i64, page_size: 
             amount: r.get("amount"),
             message: r.get("message"),
             payment_method: r.get("payment_method"),
+            status: r.get("status"),
             created_at: r.get("formatted_date"),
         }
     }).collect();
@@ -1198,4 +1333,167 @@ pub async fn get_dashboard_transactions(streamer_id: i32, page: i64, page_size: 
     Ok((txs, total_count))
 }
 
+#[server(GetStreamerLeaderboard, "/api")]
+pub async fn get_streamer_leaderboard() -> Result<Vec<LeaderboardEntry>, ServerFnError> {
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
+    let rows = sqlx::query(
+        "SELECT
+            s.id as streamer_id,
+            s.username,
+            s.display_name,
+            s.avatar_url,
+            COALESCE(SUM(t.amount), 0) as total_amount,
+            COUNT(t.id) as donation_count
+         FROM streamers s
+         JOIN transactions t ON t.streamer_id = s.id
+         WHERE t.status = 'DISPLAYED'
+         GROUP BY s.id, s.username, s.display_name, s.avatar_url
+         ORDER BY total_amount DESC, donation_count DESC, s.id ASC
+         LIMIT 50"
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+
+    use sqlx::Row;
+    Ok(rows
+        .into_iter()
+        .map(|r| LeaderboardEntry {
+            streamer_id: r.get("streamer_id"),
+            username: r.get("username"),
+            display_name: r.get("display_name"),
+            avatar_url: r.get("avatar_url"),
+            total_amount: r.get("total_amount"),
+            donation_count: r.get("donation_count"),
+        })
+        .collect())
+}
+
+#[server(GetReadyForDisplayTransactions, "/api")]
+pub async fn get_ready_for_display_transactions(
+    username: String,
+) -> Result<Vec<DbTransaction>, ServerFnError> {
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    let rows = sqlx::query(
+        "SELECT t.id, t.streamer_id, t.donor_name, t.amount, t.message, t.payment_method, t.status, TO_CHAR(t.created_at, 'YYYY-MM-DD HH:MI AM') as formatted_date
+         FROM transactions t
+         JOIN streamers s ON t.streamer_id = s.id
+         WHERE s.username = $1 AND t.status = 'READY_FOR_DISPLAY'
+         ORDER BY t.id ASC
+         LIMIT 10"
+    )
+    .bind(username)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+
+    use sqlx::Row;
+    Ok(rows
+        .into_iter()
+        .map(|r| DbTransaction {
+            id: r.get("id"),
+            streamer_id: r.get("streamer_id"),
+            donor_name: r.get("donor_name"),
+            amount: r.get("amount"),
+            message: r.get("message"),
+            payment_method: r.get("payment_method"),
+            status: r.get("status"),
+            created_at: r.get("formatted_date"),
+        })
+        .collect())
+}
+
+#[server(MarkTransactionDisplayed, "/api")]
+pub async fn mark_transaction_displayed(tx_id: i32) -> Result<(), ServerFnError> {
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    sqlx::query(
+        "UPDATE transactions SET status = 'DISPLAYED' WHERE id = $1 AND status = 'READY_FOR_DISPLAY'"
+    )
+    .bind(tx_id)
+    .execute(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database update failed: {}", e)))?;
+
+    Ok(())
+}
+
+#[server(InitOverlaySession, "/api")]
+pub async fn init_overlay_session(token: String, session_id: String) -> Result<(), ServerFnError> {
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    let rows_affected = sqlx::query(
+        "UPDATE streamers SET active_overlay_session = $1 WHERE overlay_token = $2"
+    )
+    .bind(&session_id)
+    .bind(&token)
+    .execute(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database update failed: {}", e)))?
+    .rows_affected();
+
+    if rows_affected == 0 {
+        return Err(ServerFnError::new("Invalid overlay token"));
+    }
+
+    Ok(())
+}
+
+#[server(PollOverlayTransactions, "/api")]
+pub async fn poll_overlay_transactions(token: String, session_id: String) -> Result<Vec<DbTransaction>, ServerFnError> {
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    let streamer = sqlx::query(
+        "SELECT id, active_overlay_session FROM streamers WHERE overlay_token = $1"
+    )
+    .bind(&token)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+
+    use sqlx::Row;
+    let streamer = match streamer {
+        Some(s) => s,
+        None => return Err(ServerFnError::new("Invalid overlay token")),
+    };
+
+    let active_session: Option<String> = streamer.try_get("active_overlay_session").unwrap_or(None);
+    if active_session.as_deref() != Some(&session_id) {
+        return Err(ServerFnError::ServerError("SessionRevoked".to_string()));
+    }
+
+    let streamer_id: i32 = streamer.get("id");
+
+    let rows = sqlx::query(
+        "SELECT t.id, t.streamer_id, t.donor_name, t.amount, t.message, t.payment_method, t.status, TO_CHAR(t.created_at, 'YYYY-MM-DD HH:MI AM') as formatted_date 
+         FROM transactions t
+         WHERE t.streamer_id = $1 AND t.status = 'READY_FOR_DISPLAY'
+         ORDER BY t.id ASC
+         LIMIT 5"
+    )
+    .bind(streamer_id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+
+    Ok(rows
+        .into_iter()
+        .map(|r| DbTransaction {
+            id: r.get("id"),
+            streamer_id: r.get("streamer_id"),
+            donor_name: r.get("donor_name"),
+            amount: r.get("amount"),
+            message: r.get("message"),
+            payment_method: r.get("payment_method"),
+            status: r.get("status"),
+            created_at: r.get("formatted_date"),
+        })
+        .collect())
+}
