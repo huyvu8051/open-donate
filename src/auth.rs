@@ -166,8 +166,10 @@ pub fn LoginPage() -> impl IntoView {
                             <input type="password" name="password" required class="bg-surface-container-highest border border-white/10 rounded-xl p-sm text-body-md text-on-surface focus:border-primary focus:outline-none transition-colors w-full" placeholder="••••••••"/>
                         </div>
                         
-                        <button type="submit" class="mt-md w-full bg-primary text-on-primary py-sm rounded-xl text-headline-md font-bold hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20">
-                            "Sign In"
+                        <button type="submit" 
+                            class=move || format!("mt-md w-full bg-primary text-on-primary py-sm rounded-xl text-headline-md font-bold transition-all shadow-lg shadow-primary/20 {}", if login_action.pending().get() { "opacity-70 cursor-not-allowed" } else { "hover:brightness-110 active:scale-95" })
+                            disabled=move || login_action.pending().get()>
+                            {move || if login_action.pending().get() { "Signing In..." } else { "Sign In" }}
                         </button>
                     </div>
                 </ActionForm>
@@ -223,8 +225,10 @@ pub fn RegisterPage() -> impl IntoView {
                             <input type="password" name="password_confirm" required class="bg-surface-container-highest border border-white/10 rounded-xl p-sm text-body-md text-on-surface focus:border-primary focus:outline-none transition-colors w-full" placeholder="••••••••" minlength="6"/>
                         </div>
                         
-                        <button type="submit" class="mt-md w-full bg-secondary text-on-secondary py-sm rounded-xl text-headline-md font-bold hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-secondary/20">
-                            "Sign Up"
+                        <button type="submit" 
+                            class=move || format!("mt-md w-full bg-secondary text-on-secondary py-sm rounded-xl text-headline-md font-bold transition-all shadow-lg shadow-secondary/20 {}", if register_action.pending().get() { "opacity-70 cursor-not-allowed" } else { "hover:brightness-110 active:scale-95" })
+                            disabled=move || register_action.pending().get()>
+                            {move || if register_action.pending().get() { "Signing Up..." } else { "Sign Up" }}
                         </button>
                     </div>
                 </ActionForm>

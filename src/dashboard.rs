@@ -199,7 +199,14 @@ pub fn SettingsPage() -> impl IntoView {
                 </Suspense>
 
                 <div class="flex justify-end mt-sm">
-                    <button type="submit" data-testid="settings-save-button" class="bg-primary text-on-primary font-bold px-lg py-sm rounded-xl hover:brightness-110 active:scale-95 transition-all">
+                    <button type="submit" data-testid="settings-save-button" 
+                        class=move || format!("bg-primary text-on-primary font-bold px-lg py-sm rounded-xl transition-all flex items-center gap-xs {}", if update_action.pending().get() { "opacity-70 cursor-not-allowed" } else { "hover:brightness-110 active:scale-95" })
+                        disabled=move || update_action.pending().get()>
+                        {move || if update_action.pending().get() {
+                            view! { <span class="material-symbols-outlined text-[18px] animate-spin">"progress_activity"</span> }.into_any()
+                        } else {
+                            view! { }.into_any()
+                        }}
                         {leptos_fluent::move_tr!("settings-btn-save")}
                     </button>
                 </div>
@@ -253,7 +260,14 @@ pub fn PaymentsPage() -> impl IntoView {
                     </Suspense>
 
                     <div class="flex justify-end pt-sm border-t border-white/10">
-                        <button type="submit" data-testid="save-payments-btn" class="bg-primary text-on-primary font-bold py-sm px-xl rounded-xl hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20">
+                        <button type="submit" data-testid="save-payments-btn" 
+                            class=move || format!("bg-primary text-on-primary font-bold py-sm px-xl rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center gap-xs {}", if update_action.pending().get() { "opacity-70 cursor-not-allowed" } else { "hover:brightness-110 active:scale-95" })
+                            disabled=move || update_action.pending().get()>
+                            {move || if update_action.pending().get() {
+                                view! { <span class="material-symbols-outlined text-[18px] animate-spin">"progress_activity"</span> }.into_any()
+                            } else {
+                                view! { }.into_any()
+                            }}
                             {leptos_fluent::move_tr!("payments-btn-save")}
                         </button>
                     </div>

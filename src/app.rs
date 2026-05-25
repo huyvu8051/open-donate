@@ -157,7 +157,14 @@ pub fn Header() -> impl IntoView {
                                     <div class="flex items-center gap-sm">
                                         <a href="/dashboard" class="hidden sm:inline text-on-surface text-label-md font-semibold hover:text-primary transition-colors">"Hello, " {user.name.clone()}</a>
                                         <ActionForm action=logout_action>
-                                            <button data-testid="logout-button" type="submit" class="px-sm py-xs bg-surface-container-highest border border-white/10 hover:bg-surface-container-highest/80 text-on-surface rounded-lg text-label-sm font-label-sm transition-all">
+                                            <button data-testid="logout-button" type="submit" 
+                                                class=move || format!("px-sm py-xs bg-surface-container-highest border border-white/10 text-on-surface rounded-lg text-label-sm font-label-sm transition-all flex items-center gap-xs {}", if logout_action.pending().get() { "opacity-50 cursor-wait" } else { "hover:bg-surface-container-highest/80" })
+                                                disabled=move || logout_action.pending().get()>
+                                                {move || if logout_action.pending().get() {
+                                                    view! { <span class="material-symbols-outlined text-[14px] animate-spin">"progress_activity"</span> }.into_any()
+                                                } else {
+                                                    view! { }.into_any()
+                                                }}
                                                 {leptos_fluent::move_tr!("header-logout")}
                                             </button>
                                         </ActionForm>
