@@ -99,6 +99,8 @@ pub fn App() -> impl IntoView {
                         <Route path=StaticSegment("payments") view=crate::dashboard::PaymentsPage/>
                         <Route path=StaticSegment("analytics") view=crate::dashboard::AnalyticsPage/>
                     </ParentRoute>
+                    <Route path=StaticSegment("login") view=crate::auth::LoginPage/>
+                    <Route path=StaticSegment("register") view=crate::auth::RegisterPage/>
                     <Route path=(StaticSegment("streamer"), ParamSegment("username")) view=StreamerPage/>
                     <Route path=(StaticSegment("overlay"), ParamSegment("token")) view=crate::overlay::OverlayPage/>
                 </Routes>
@@ -128,6 +130,13 @@ pub fn Header() -> impl IntoView {
         }
     };
     let (is_open, set_is_open) = signal(false);
+    let logout_action = ServerAction::<crate::auth::Logout>::new();
+
+    Effect::new(move |_| {
+        if let Some(Ok(_)) = logout_action.value().get() {
+            let _ = leptos::prelude::window().location().set_href("/");
+        }
+    });
 
     view! {
         <header class="fixed top-0 w-full z-50 bg-surface/60 backdrop-blur-xl border-b border-white/20 shadow-sm flex flex-col px-margin-mobile md:px-margin-desktop">
@@ -147,15 +156,17 @@ pub fn Header() -> impl IntoView {
                                 Some(Ok(Some(user))) => view! {
                                     <div class="flex items-center gap-sm">
                                         <a href="/dashboard" class="hidden sm:inline text-on-surface text-label-md font-semibold hover:text-primary transition-colors">"Hello, " {user.name.clone()}</a>
-                                        <a href="/api/logout" rel="external" class="px-sm py-xs bg-surface-container-highest border border-white/10 hover:bg-surface-container-highest/80 text-on-surface rounded-lg text-label-sm font-label-sm transition-all">
-                                            {leptos_fluent::move_tr!("header-logout")}
-                                        </a>
+                                        <ActionForm action=logout_action>
+                                            <button data-testid="logout-button" type="submit" class="px-sm py-xs bg-surface-container-highest border border-white/10 hover:bg-surface-container-highest/80 text-on-surface rounded-lg text-label-sm font-label-sm transition-all">
+                                                {leptos_fluent::move_tr!("header-logout")}
+                                            </button>
+                                        </ActionForm>
                                         <LanguageSwitcher />
                                     </div>
                                 }.into_any(),
                                 _ => view! {
                                     <div class="flex items-center gap-sm">
-                                        <a href="/api/login" rel="external" class="px-md py-xs bg-primary text-on-primary rounded-lg text-label-md font-label-md font-semibold hover:bg-primary/95 transition-all shadow-sm">
+                                        <a href="/login" class="px-md py-xs bg-primary text-on-primary rounded-lg text-label-md font-label-md font-semibold hover:bg-primary/95 transition-all shadow-sm">
                                             {leptos_fluent::move_tr!("header-login")}
                                         </a>
                                         <LanguageSwitcher />

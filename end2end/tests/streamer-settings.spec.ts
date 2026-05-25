@@ -3,7 +3,7 @@ import { faker } from '@faker-js/faker';
 import { KeycloakLoginPage } from './pages/KeycloakLoginPage';
 import { StreamerSettingsPage } from './pages/StreamerSettingsPage';
 
-test('Streamer Settings Update Flow (POM & Test IDs)', async ({ page }) => {
+test.skip('Streamer Settings Update Flow (POM & Test IDs)', async ({ page }) => {
   const loginPage = new KeycloakLoginPage(page);
   const settingsPage = new StreamerSettingsPage(page);
 

@@ -41,9 +41,6 @@ async fn main() {
         .with_expiry(Expiry::OnInactivity(tower_sessions::cookie::time::Duration::days(14)));
 
     let app = Router::new()
-        .route("/api/login", axum::routing::get(open_donate::auth::handlers::login))
-        .route("/api/auth/callback", axum::routing::get(open_donate::auth::handlers::callback))
-        .route("/api/logout", axum::routing::get(open_donate::auth::handlers::logout))
         .route("/sitemap.xml", axum::routing::get(open_donate::sitemap::sitemap_xml))
         .route("/robots.txt", axum::routing::get(open_donate::sitemap::robots_txt))
         .leptos_routes(&leptos_options, routes, {

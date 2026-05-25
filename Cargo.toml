@@ -32,6 +32,8 @@ tower-sessions = { version = "0.15.0", optional = true }
 tower-sessions-sqlx-store = { git = "https://github.com/maxcountryman/tower-sessions-stores.git", branch = "main", features = ["postgres"], optional = true }
 uuid = { version = "1.23.1", features = ["v4", "js"] }
 leptos-fluent = { version = "0.3.1", features = ["axum", "ssr"] }
+argon2 = { version = "0.5.3", optional = true }
+password-hash = { version = "0.6.1", optional = true }
 
 [features]
 hydrate = [
@@ -61,8 +63,11 @@ ssr = [
     "dep:rand",
     "dep:tower-sessions",
     "dep:tower-sessions-sqlx-store",
-
+    "dep:argon2",
+    "dep:password-hash",
 ]
+argon2 = ["dep:argon2"]
+password-hash = ["dep:password-hash"]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]
