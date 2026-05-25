@@ -60,3 +60,14 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Trigger Render Deployment
+        if: github.event_name != 'pull_request'
+        run: |
+          if [ -n "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+            echo "Triggering Render deployment..."
+            curl -s -X GET "${{ secrets.RENDER_DEPLOY_HOOK }}"
+            echo -e "\nDeployment triggered successfully."
+          else
+            echo "RENDER_DEPLOY_HOOK secret is not set. Skipping Render deployment."
+          fi
