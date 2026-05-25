@@ -22,20 +22,23 @@ pub async fn login_with_email(email: String, password: String) -> Result<(), Ser
     let pool = extract::<axum::Extension<sqlx::PgPool>>().await
         .map_err(|_| ServerFnError::new("Database connection error"))?;
 
-    let record = sqlx::query!("SELECT id, name, email, password_hash FROM users WHERE email = $1", email)
+    let record = sqlx::query("SELECT id, name, email, password_hash FROM users WHERE email = $1")
+        .bind(email)
         .fetch_optional(&*pool)
         .await
         .map_err(|_| ServerFnError::new("Database query failed"))?;
 
     if let Some(record) = record {
-        let parsed_hash = PasswordHash::new(&record.password_hash)
+        use sqlx::Row;
+        let password_hash_str: String = record.get("password_hash");
+        let parsed_hash = PasswordHash::new(&password_hash_str)
             .map_err(|_| ServerFnError::new("Password hash error"))?;
             
         if Argon2::default().verify_password(password.as_bytes(), &parsed_hash).is_ok() {
             let user = User {
-                id: record.id,
-                name: record.name,
-                email: record.email,
+                id: record.get("id"),
+                name: record.get("name"),
+                email: record.get("email"),
             };
 
             let session = extract::<Session>().await
@@ -77,10 +80,13 @@ pub async fn register_with_email(email: String, password: String, password_confi
     let user_id = uuid::Uuid::new_v4().to_string();
     let name = email.split('@').next().unwrap_or("User").to_string();
 
-    let result = sqlx::query!(
-        "INSERT INTO users (id, name, email, password_hash) VALUES ($1, $2, $3, $4)",
-        user_id, name, email, password_hash
+    let result = sqlx::query(
+        "INSERT INTO users (id, name, email, password_hash) VALUES ($1, $2, $3, $4)"
     )
+    .bind(&user_id)
+    .bind(&name)
+    .bind(&email)
+    .bind(&password_hash)
     .execute(&*pool)
     .await;
 
