@@ -173,7 +173,7 @@ pub fn Header() -> impl IntoView {
                                 }.into_any(),
                                 _ => view! {
                                     <div class="flex items-center gap-sm">
-                                        <a href="/login" class="px-md py-xs bg-primary text-on-primary rounded-lg text-label-md font-label-md font-semibold hover:bg-primary/95 transition-all shadow-sm">
+                                        <a href="/login" class="text-on-surface-variant text-label-md font-label-md font-semibold hover:text-primary transition-colors px-2">
                                             {leptos_fluent::move_tr!("header-login")}
                                         </a>
                                         <LanguageSwitcher />
@@ -281,9 +281,9 @@ pub fn Hero() -> impl IntoView {
                     <button class="px-lg py-md bg-secondary text-on-secondary-container rounded-xl font-headline-md text-headline-md neon-glow-secondary hover:scale-105 transition-transform active:scale-95 duration-150">
                         {leptos_fluent::move_tr!("landing-donate-now")}
                     </button>
-                    <button class="px-lg py-md bg-surface-container-highest/40 backdrop-blur-md border border-white/20 text-on-surface rounded-xl font-headline-md text-headline-md hover:bg-surface-container-highest/60 transition-all">
+                    <a href="/register" class="px-lg py-md bg-surface-container-highest/40 backdrop-blur-md border border-white/20 text-on-surface rounded-xl font-headline-md text-headline-md hover:bg-surface-container-highest/60 transition-all inline-block text-center">
                         {leptos_fluent::move_tr!("landing-start-creating")}
-                    </button>
+                    </a>
                 </div>
             </div>
             <div class="mt-xl grid grid-cols-1 md:grid-cols-3 gap-md w-full max-w-5xl">
