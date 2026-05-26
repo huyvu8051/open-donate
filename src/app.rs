@@ -173,9 +173,6 @@ pub fn Header() -> impl IntoView {
                                 }.into_any(),
                                 _ => view! {
                                     <div class="flex items-center gap-sm">
-                                        <a href="/login" class="text-on-surface-variant text-label-md font-label-md font-semibold hover:text-primary transition-colors px-2">
-                                            {leptos_fluent::move_tr!("header-login")}
-                                        </a>
                                         <LanguageSwitcher />
                                     </div>
                                 }.into_any()
