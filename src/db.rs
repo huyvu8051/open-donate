@@ -71,6 +71,18 @@ pub struct DbStreamer {
     pub payment_methods: Vec<PaymentMethod>,
     pub overlay_paused: bool,
     pub overlay_sound_enabled: bool,
+    pub selected_media_id: Option<uuid::Uuid>,
+    pub fallback_media_file: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct DbStreamerMedia {
+    pub id: uuid::Uuid,
+    pub streamer_id: i32,
+    pub file_name: String,
+    pub file_url: String,
+    pub size_bytes: i32,
+    pub created_at: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]

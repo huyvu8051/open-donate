@@ -6,6 +6,7 @@ import { OverlayPage } from './pages/OverlayPage';
 
 test.describe('Overlay Flow E2E', () => {
   test('Streamer can open overlay, see status change, and test donation', async () => {
+    test.setTimeout(90000); // Increase timeout since this test has long waits for animations
     // We need to allow multiple contexts to simulate Streamer + OBS Browser Source
     const browser = await chromium.launch();
     const streamerContext = await browser.newContext();
@@ -63,6 +64,10 @@ test.describe('Overlay Flow E2E', () => {
     // ==========================================
     console.log('OBS: Opening overlay link...');
     await overlayPage.open(overlayUrl);
+    
+    // Playwright disables autoplay without user gesture in Safari/WebKit sometimes.
+    // We must dismiss the prompt to unlock audio and see the mock donation.
+    await overlayPage.dismissInteractionPrompt();
 
     // ==========================================
     // 5. Streamer sees status change to Active
@@ -82,8 +87,49 @@ test.describe('Overlay Flow E2E', () => {
     // ==========================================
     console.log('OBS: Waiting for test donation animation...');
     await overlayPage.checkMockDonation();
+    
+    // Wait for the first donation to finish displaying and cleanup
+    await overlayPage.page.waitForTimeout(7000);
 
-    console.log('Success! Overlay E2E test passed.');
+    // ==========================================
+    // 8. Test Pause Overlay
+    // ==========================================
+    console.log('Streamer: Toggling Pause Overlay...');
+    await dashboardPage.togglePause();
+    
+    console.log('Streamer: Sending another test donation while paused...');
+    await dashboardPage.testOverlay();
+    
+    console.log('OBS: Verifying no donation appears (Overlay is Paused)...');
+    await overlayPage.verifyNoMockDonation();
+    
+    // ==========================================
+    // 9. Test Resume Overlay
+    // ==========================================
+    console.log('Streamer: Resuming Overlay...');
+    await dashboardPage.togglePause();
+    
+    console.log('OBS: Waiting for queued donation to appear after resuming...');
+    await overlayPage.checkMockDonation();
+
+    // Wait for the second donation to finish displaying
+    await overlayPage.page.waitForTimeout(7000);
+
+    // ==========================================
+    // 10. Test Mute Sound
+    // ==========================================
+    console.log('Streamer: Toggling Sound OFF...');
+    await dashboardPage.toggleSound();
+    
+    console.log('Streamer: Sending another test donation (Muted)...');
+    await dashboardPage.testOverlay();
+    
+    console.log('OBS: Verifying donation appears (Even if muted)...');
+    // We can only visually verify the donation appears, Playwright doesn't easily verify if audio actually played vs didn't play
+    // without complex setup, so we just ensure the overlay doesn't crash and still shows the visual.
+    await overlayPage.checkMockDonation();
+
+    console.log('Success! Overlay E2E test passed including Pause and Sound toggles.');
 
     await browser.close();
   });

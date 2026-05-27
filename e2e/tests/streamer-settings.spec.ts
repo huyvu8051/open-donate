@@ -1,19 +1,16 @@
 import { test } from '@playwright/test';
 import { faker } from '@faker-js/faker';
-import { KeycloakLoginPage } from './pages/KeycloakLoginPage';
+import { DashboardPage } from './pages/DashboardPage';
 import { StreamerSettingsPage } from './pages/StreamerSettingsPage';
 
 test.skip('Streamer Settings Update Flow (POM & Test IDs)', async ({ page }) => {
-  const loginPage = new KeycloakLoginPage(page);
+  const loginPage = new DashboardPage(page);
   const settingsPage = new StreamerSettingsPage(page);
-
-  // 1. Authenticate / Auto-onboard via Keycloak
-  console.log('Navigating to app login endpoint...');
-  await loginPage.gotoAppLogin();
 
   const fakeEmail = faker.internet.email();
   console.log(`Registering new user: ${fakeEmail}`);
-  await loginPage.registerNewUser(fakeEmail);
+  await loginPage.register(fakeEmail);
+  await loginPage.waitForDashboard();
 
   // 2. Navigate to Settings Page
   console.log('Navigating to dashboard settings...');

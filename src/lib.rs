@@ -7,6 +7,7 @@ pub mod db;
 pub mod dashboard;
 pub mod overlay;
 pub mod pages;
+pub mod s3;
 
 #[cfg(feature = "ssr")]
 pub mod sitemap;

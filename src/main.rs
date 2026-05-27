@@ -111,6 +111,8 @@ async fn main() {
         .with_expiry(Expiry::OnInactivity(tower_sessions::cookie::time::Duration::days(14)));
 
     let app = Router::new()
+        .route("/api/{*fn_name}", axum::routing::get(leptos_axum::handle_server_fns))
+        .route("/api/{*fn_name}", axum::routing::post(leptos_axum::handle_server_fns))
         .route("/sitemap.xml", axum::routing::get(open_donate::sitemap::sitemap_xml))
         .route("/robots.txt", axum::routing::get(open_donate::sitemap::robots_txt))
         .leptos_routes(&leptos_options, routes, {

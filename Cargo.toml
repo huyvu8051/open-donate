@@ -17,7 +17,7 @@ tokio = { version = "1", features = ["rt-multi-thread"], optional = true }
 wasm-bindgen = { version = "0.2.106", optional = true }
 gloo-timers = { version = "0.3", features = ["futures"], optional = true }
 wasm-bindgen-futures = { version = "0.4", optional = true }
-web-sys = { version = "0.3", features = ["Window", "Navigator", "Clipboard"], optional = true }
+web-sys = { version = "0.3", features = ["Window", "Navigator", "Clipboard", "HtmlInputElement", "FileList", "File", "Headers", "Request", "RequestInit", "Response", "RequestCredentials"], optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", optional = true }
 reqwest = { version = "0.12", features = ["json"], optional = true }
@@ -25,12 +25,12 @@ jsonwebtoken = { version = "9", optional = true }
 urlencoding = { version = "2", optional = true }
 dotenvy = { version = "0.15", optional = true }
 rand = { version = "0.8", optional = true }
-sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "macros", "tls-native-tls", "migrate", "chrono"], optional = true }
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "macros", "tls-native-tls", "migrate", "chrono", "uuid"], optional = true }
 chrono = { version = "0.4", optional = true }
 once_cell = { version = "1", optional = true }
 tower-sessions = { version = "0.15.0", optional = true }
 tower-sessions-sqlx-store = { git = "https://github.com/maxcountryman/tower-sessions-stores.git", branch = "main", features = ["postgres"], optional = true }
-uuid = { version = "1.23.1", features = ["v4", "js"] }
+uuid = { version = "1.23.1", features = ["v4", "js", "serde"] }
 leptos-fluent = { version = "0.3.1", features = ["axum", "ssr"] }
 argon2 = { version = "0.5.3", optional = true }
 password-hash = { version = "0.6.1", optional = true }
@@ -42,6 +42,12 @@ opentelemetry_sdk = { version = "0.32.1", features = ["rt-tokio"], optional = tr
 opentelemetry-otlp = { version = "0.32.0", features = ["http-proto", "reqwest-blocking-client", "reqwest-rustls"], optional = true }
 axum-tracing-opentelemetry = { version = "0.38.0", optional = true }
 opentelemetry-appender-tracing = { version = "0.32.0", optional = true }
+aws-config = { version = "1.8.17", optional = true }
+aws-sdk-s3 = { version = "1.133.0", optional = true }
+bytes = "1.11.1"
+cfg-if = "1.0.4"
+server_fn = { version = "0.8.12", features = ["multipart"] }
+futures = { version = "0.3.32", optional = true }
 
 [features]
 hydrate = [
@@ -81,6 +87,9 @@ ssr = [
     "dep:opentelemetry-otlp",
     "dep:axum-tracing-opentelemetry",
     "dep:opentelemetry-appender-tracing",
+    "dep:aws-config",
+    "dep:aws-sdk-s3",
+    "dep:futures",
 ]
 argon2 = ["dep:argon2"]
 password-hash = ["dep:password-hash"]
@@ -92,6 +101,7 @@ opentelemetry_sdk = ["dep:opentelemetry_sdk"]
 opentelemetry-otlp = ["dep:opentelemetry-otlp"]
 axum-tracing-opentelemetry = ["dep:axum-tracing-opentelemetry"]
 opentelemetry-appender-tracing = ["dep:opentelemetry-appender-tracing"]
+futures = ["dep:futures"]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]

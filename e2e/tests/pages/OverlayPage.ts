@@ -17,6 +17,19 @@ export class OverlayPage {
         await this.page.goto(url);
     }
 
+    async dismissInteractionPrompt() {
+        // Try to click the interaction prompt if it appears (to unlock audio)
+        try {
+            const prompt = this.page.getByText('Click to enable Audio');
+            await prompt.waitFor({ state: 'visible', timeout: 3000 });
+            await prompt.click();
+            console.log('Dismissed interaction prompt on overlay.');
+        } catch (e) {
+            // It might not appear if autoplay is allowed (e.g. chromium)
+            console.log('No interaction prompt appeared.');
+        }
+    }
+
     async checkMockDonation() {
         await expect(this.donorName).toBeVisible({ timeout: 15000 });
         await expect(this.donorName).toHaveText('System Test');
@@ -24,5 +37,11 @@ export class OverlayPage {
         await expect(this.amount).toHaveText('$5.00');
         await expect(this.message).toBeVisible();
         await expect(this.message).toHaveText(/"This is a test donation for your overlay!"/);
+    }
+
+    async verifyNoMockDonation() {
+        // Wait briefly to ensure it doesn't appear
+        await this.page.waitForTimeout(5000);
+        await expect(this.donorName).toBeHidden();
     }
 }

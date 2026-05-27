@@ -1152,7 +1152,7 @@ pub async fn get_streamer(username: String) -> Result<Option<DbStreamer>, Server
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let row = sqlx::query(
-        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods, overlay_paused, overlay_sound_enabled FROM streamers WHERE username = $1"
+        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods, overlay_paused, overlay_sound_enabled, selected_media_id, fallback_media_file FROM streamers WHERE username = $1"
     )
     .bind(username)
     .fetch_optional(&pool)
@@ -1175,6 +1175,8 @@ pub async fn get_streamer(username: String) -> Result<Option<DbStreamer>, Server
                 payment_methods: r.try_get("payment_methods").unwrap_or_else(|_| vec![PaymentMethod::MockAuto, PaymentMethod::MockManual]),
                 overlay_paused: r.try_get("overlay_paused").unwrap_or(false),
                 overlay_sound_enabled: r.try_get("overlay_sound_enabled").unwrap_or(true),
+                selected_media_id: r.try_get("selected_media_id").unwrap_or(None),
+                fallback_media_file: r.try_get("fallback_media_file").unwrap_or_else(|_| "/public/default_donate.mp3".to_string()),
             }))
         }
         None => Ok(None),
@@ -1192,7 +1194,7 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let existing = sqlx::query(
-        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods, overlay_paused, overlay_sound_enabled FROM streamers WHERE user_id = $1"
+        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods, overlay_paused, overlay_sound_enabled, selected_media_id, fallback_media_file FROM streamers WHERE user_id = $1"
     )
     .bind(&user.id)
     .fetch_optional(&pool)
@@ -1215,6 +1217,8 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
             payment_methods: r.try_get("payment_methods").unwrap_or_else(|_| vec![PaymentMethod::MockAuto, PaymentMethod::MockManual]),
             overlay_paused: r.try_get("overlay_paused").unwrap_or(false),
             overlay_sound_enabled: r.try_get("overlay_sound_enabled").unwrap_or(true),
+            selected_media_id: r.try_get("selected_media_id").unwrap_or(None),
+            fallback_media_file: r.try_get("fallback_media_file").unwrap_or_else(|_| "/public/default_donate.mp3".to_string()),
         }));
     }
 
@@ -1242,8 +1246,8 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
 
     let row = sqlx::query(
         "INSERT INTO streamers (username, display_name, avatar_url, bio, is_live, user_id, overlay_token, payment_methods, overlay_paused, overlay_sound_enabled)
-         VALUES ($1, $2, $3, $4, $5, $6, gen_random_uuid(), $7)
-         RETURNING id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods"
+         VALUES ($1, $2, $3, $4, $5, $6, gen_random_uuid(), $7, false, true)
+         RETURNING id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods, overlay_paused, overlay_sound_enabled, selected_media_id, fallback_media_file"
     )
     .bind(&username)
     .bind(&display_name)
@@ -1269,6 +1273,8 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
         payment_methods: row.try_get("payment_methods").unwrap_or_else(|_| vec![PaymentMethod::MockAuto, PaymentMethod::MockManual]),
         overlay_paused: row.try_get("overlay_paused").unwrap_or(false),
         overlay_sound_enabled: row.try_get("overlay_sound_enabled").unwrap_or(true),
+        selected_media_id: row.try_get("selected_media_id").unwrap_or(None),
+        fallback_media_file: row.try_get("fallback_media_file").unwrap_or_else(|_| "/public/default_donate.mp3".to_string()),
     }))
 }
 
@@ -1410,7 +1416,7 @@ pub async fn get_all_streamers() -> Result<Vec<DbStreamer>, ServerFnError> {
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let rows = sqlx::query(
-        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods, overlay_paused, overlay_sound_enabled FROM streamers ORDER BY is_live DESC, id DESC"
+        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods, overlay_paused, overlay_sound_enabled, selected_media_id, fallback_media_file FROM streamers ORDER BY is_live DESC, id DESC"
     )
     .fetch_all(&pool)
     .await
@@ -1431,6 +1437,8 @@ pub async fn get_all_streamers() -> Result<Vec<DbStreamer>, ServerFnError> {
             payment_methods: r.try_get("payment_methods").unwrap_or_else(|_| vec![PaymentMethod::MockAuto, PaymentMethod::MockManual]),
             overlay_paused: r.try_get("overlay_paused").unwrap_or(false),
             overlay_sound_enabled: r.try_get("overlay_sound_enabled").unwrap_or(true),
+            selected_media_id: r.try_get("selected_media_id").unwrap_or(None),
+            fallback_media_file: r.try_get("fallback_media_file").unwrap_or_else(|_| "/public/default_donate.mp3".to_string()),
         }
     }).collect();
 
@@ -1806,12 +1814,15 @@ pub async fn init_overlay_session(token: String, session_id: String) -> Result<(
 }
 
 #[server(PrefetchUpcomingTransactions, "/api")]
-pub async fn prefetch_upcoming_transactions(token: String, session_id: String) -> Result<(Vec<DbTransaction>, bool, bool), ServerFnError> {
+pub async fn prefetch_upcoming_transactions(token: String, session_id: String) -> Result<(Vec<DbTransaction>, bool, bool, Option<String>, String), ServerFnError> {
     let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let streamer = sqlx::query(
-        "SELECT id, active_overlay_session, overlay_paused, overlay_sound_enabled FROM streamers WHERE overlay_token = $1"
+        "SELECT s.id, s.active_overlay_session, s.overlay_paused, s.overlay_sound_enabled, sm.file_url, s.fallback_media_file 
+         FROM streamers s 
+         LEFT JOIN streamer_media sm ON s.selected_media_id = sm.id 
+         WHERE s.overlay_token = $1"
     )
     .bind(&token)
     .fetch_optional(&pool)
@@ -1832,6 +1843,8 @@ pub async fn prefetch_upcoming_transactions(token: String, session_id: String) -
     let streamer_id: i32 = streamer.get("id");
     let overlay_paused: bool = streamer.try_get("overlay_paused").unwrap_or(false);
     let overlay_sound_enabled: bool = streamer.try_get("overlay_sound_enabled").unwrap_or(true);
+    let primary_media_url: Option<String> = streamer.try_get("file_url").unwrap_or(None);
+    let fallback_media_file: String = streamer.try_get("fallback_media_file").unwrap_or_else(|_| "/public/default_donate.mp3".to_string());
 
     let _ = sqlx::query("UPDATE streamers SET last_overlay_ping = CURRENT_TIMESTAMP WHERE id = $1")
         .bind(streamer_id)
@@ -1839,7 +1852,7 @@ pub async fn prefetch_upcoming_transactions(token: String, session_id: String) -
         .await;
 
     if overlay_paused {
-        return Ok((vec![], overlay_paused, overlay_sound_enabled));
+        return Ok((vec![], overlay_paused, overlay_sound_enabled, primary_media_url, fallback_media_file));
     }
 
     let rows = sqlx::query(
@@ -1865,7 +1878,7 @@ pub async fn prefetch_upcoming_transactions(token: String, session_id: String) -
         created_at: r.get("formatted_date"),
     }).collect();
 
-    Ok((txs, overlay_paused ,overlay_sound_enabled))
+    Ok((txs, overlay_paused ,overlay_sound_enabled, primary_media_url, fallback_media_file))
 }
 
 #[server(LockTransaction, "/api")]
@@ -2016,3 +2029,133 @@ pub async fn mark_transaction_viewed(tx_id: i32) -> Result<(), ServerFnError> {
         .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
     Ok(())
 }
+
+
+#[server(CheckS3Status, "/api")]
+pub async fn check_s3_status() -> Result<bool, ServerFnError> {
+    use crate::s3::S3_STATUS;
+    let mut rx = S3_STATUS.1.clone();
+    
+    // If it hasn't polled yet, wait for the first poll
+    if rx.borrow().is_none() {
+        let _ = rx.changed().await;
+    }
+    
+    let status = *rx.borrow();
+    Ok(status.unwrap_or(false))
+}
+
+#[server(GetStreamerMedia, "/api")]
+pub async fn get_streamer_media() -> Result<Vec<crate::db::DbStreamerMedia>, ServerFnError> {
+    let user = match get_me().await? {
+        Some(u) => u,
+        None => return Err(ServerFnError::new("Not authenticated")),
+    };
+
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    let streamer_id: i32 = sqlx::query_scalar("SELECT id FROM streamers WHERE user_id = $1")
+        .bind(&user.id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| ServerFnError::new(format!("Streamer not found: {}", e)))?;
+
+    let rows = sqlx::query_as!(
+        crate::db::DbStreamerMedia,
+        "SELECT id, streamer_id, file_name, file_url, size_bytes, TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as \"created_at!\" FROM streamer_media WHERE streamer_id = $1 ORDER BY created_at DESC",
+        streamer_id
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+
+    Ok(rows)
+}
+
+#[server(GetDefaultMedias, "/api")]
+pub async fn get_default_medias() -> Result<Vec<String>, ServerFnError> {
+    // Return list of available system default audio files
+    Ok(vec![
+        "/public/default_donate.mp3".to_string(),
+        "/public/audio/funny_1.mp3".to_string(),
+        "/public/audio/cheer_1.mp3".to_string(),
+    ])
+}
+
+#[server(SaveMediaSettings, "/api")]
+pub async fn save_media_settings(
+    selected_media_id: Option<uuid::Uuid>,
+    fallback_media_file: String,
+) -> Result<(), ServerFnError> {
+    let user = match get_me().await? {
+        Some(u) => u,
+        None => return Err(ServerFnError::new("Not authenticated")),
+    };
+
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    sqlx::query(
+        "UPDATE streamers SET selected_media_id = $1, fallback_media_file = $2 WHERE user_id = $3"
+    )
+    .bind(selected_media_id)
+    .bind(fallback_media_file)
+    .bind(&user.id)
+    .execute(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database update failed: {}", e)))?;
+
+    Ok(())
+}
+
+#[server(GetPresignedUrl, "/api")]
+pub async fn get_presigned_url(file_name: String, content_type: String) -> Result<(String, String), ServerFnError> {
+    let _user = match get_me().await? {
+        Some(u) => u,
+        None => {
+            tracing::error!("get_presigned_url: Not authenticated");
+            return Err(ServerFnError::new("Not authenticated"));
+        }
+    };
+
+    let (public_url, upload_url) = crate::s3::generate_presigned_url(&file_name, &content_type)
+        .await
+        .map_err(|e| {
+            tracing::error!("get_presigned_url error: {}", e);
+            ServerFnError::new(e)
+        })?;
+        
+    Ok((public_url, upload_url))
+}
+
+#[server(SaveMediaRecord, "/api")]
+pub async fn save_media_record(file_name: String, file_url: String, size_bytes: i32) -> Result<(), ServerFnError> {
+    let user = match get_me().await? {
+        Some(u) => u,
+        None => return Err(ServerFnError::new("Not authenticated")),
+    };
+
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    let streamer_id: i32 = sqlx::query_scalar("SELECT id FROM streamers WHERE user_id = $1")
+        .bind(&user.id)
+        .fetch_one(&pool)
+        .await
+        .map_err(|e| ServerFnError::new(format!("Streamer not found: {}", e)))?;
+
+    sqlx::query(
+        "INSERT INTO streamer_media (streamer_id, file_name, file_url, size_bytes) VALUES ($1, $2, $3, $4)"
+    )
+    .bind(streamer_id)
+    .bind(file_name)
+    .bind(file_url)
+    .bind(size_bytes)
+    .execute(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database error: {}", e)))?;
+
+    Ok(())
+}
+

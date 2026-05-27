@@ -25,15 +25,19 @@ pub fn OverlayPage() -> impl IntoView {
         }
     };
 
-    #[cfg(feature = "hydrate")]
+    #[allow(unused_variables)]
     let queue = RwSignal::new(Vec::<DbTransaction>::new());
     let current = RwSignal::new(None::<DbTransaction>);
-    #[cfg(feature = "hydrate")]
+    #[allow(unused_variables)]
     let is_playing = RwSignal::new(false);
-    #[cfg(feature = "hydrate")]
+    #[allow(unused_variables)]
     let is_sound_enabled = RwSignal::new(true);
-    #[cfg(feature = "hydrate")]
+    #[allow(unused_variables)]
     let media_cache = RwSignal::new(std::collections::HashMap::<i32, String>::new());
+    
+    let primary_media = RwSignal::new(None::<String>);
+    let fallback_media = RwSignal::new(None::<String>);
+    let fallback_level = RwSignal::new(0u8);
 
     #[cfg(feature = "hydrate")]
     {
@@ -85,9 +89,18 @@ pub fn OverlayPage() -> impl IntoView {
                     }
                     
                     let result = prefetch_upcoming_transactions(tok_inner.clone(), sid_inner.clone()).await;
-                    if let Ok((txs,_overlay_paused, sound_enabled)) = result {
+                    if let Ok((txs, _overlay_paused, sound_enabled, primary, fallback)) = result {
                         is_sound_enabled.set(sound_enabled);
                         queue.set(txs.clone());
+                        
+                        // Update media settings
+                        if primary_media.get_untracked() != primary {
+                            primary_media.set(primary);
+                            fallback_level.set(0);
+                        }
+                        if fallback_media.get_untracked() != Some(fallback.clone()) {
+                            fallback_media.set(Some(fallback));
+                        }
                         
                         // Here we would fetch actual media and store Blob URLs
                         media_cache.update(|cache| {
@@ -187,11 +200,30 @@ pub fn OverlayPage() -> impl IntoView {
             });
         });
     }
+    let current_audio_src = move || {
+        let level = fallback_level.get();
+        if level == 0 {
+            if let Some(src) = primary_media.get() {
+                return src;
+            }
+        }
+        if level <= 1 {
+            if let Some(src) = fallback_media.get() {
+                return src;
+            }
+        }
+        "/public/default_donate.mp3".to_string()
+    };
 
     view! {
         <style>"body { background: transparent !important; }"</style>
         <audio id="audio-silence" src="/audio/silence.wav" preload="auto"></audio>
-        <audio id="audio-donate" src="/audio/donate.wav" preload="auto"></audio>
+        <audio id="audio-donate" src=current_audio_src preload="auto" on:error=move |_| {
+            let level = fallback_level.get();
+            if level < 2 {
+                fallback_level.set(level + 1);
+            }
+        }></audio>
         <main class="fixed inset-0 w-screen h-screen bg-transparent overflow-hidden pointer-events-none flex flex-col items-center justify-center">
             {move || {
                 if is_revoked.get() {

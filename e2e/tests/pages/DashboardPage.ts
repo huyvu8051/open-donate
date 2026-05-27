@@ -9,6 +9,8 @@ export class DashboardPage {
     readonly copyOverlayLinkBtn: Locator;
     readonly emailInput: Locator;
     readonly submitBtn: Locator;
+    readonly togglePauseBtn: Locator;
+    readonly toggleSoundBtn: Locator;
 
     constructor(page: Page) {
         this.page = page;
@@ -17,6 +19,8 @@ export class DashboardPage {
         this.inactiveStatus = page.getByTestId('overlay-status-inactive');
         this.testOverlayBtn = page.getByTestId('test-overlay-btn');
         this.copyOverlayLinkBtn = page.getByTestId('copy-overlay-link-btn');
+        this.togglePauseBtn = page.getByTestId('toggle-pause-btn');
+        this.toggleSoundBtn = page.getByTestId('toggle-sound-btn');
         
         // Register page locators
         this.emailInput = page.locator('input[name="email"]');
@@ -49,5 +53,13 @@ export class DashboardPage {
 
     async testOverlay() {
         await this.testOverlayBtn.click();
+    }
+
+    async togglePause() {
+        await this.togglePauseBtn.click();
+    }
+
+    async toggleSound() {
+        await this.toggleSoundBtn.click();
     }
 }
