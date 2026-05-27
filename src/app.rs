@@ -2128,6 +2128,28 @@ pub async fn get_presigned_url(file_name: String, content_type: String) -> Resul
     Ok((public_url, upload_url))
 }
 
+#[server(UpdateAvatarUrl, "/api")]
+pub async fn update_avatar_url(new_avatar_url: String) -> Result<(), ServerFnError> {
+    let user = match get_me().await? {
+        Some(u) => u,
+        None => return Err(ServerFnError::new("Not authenticated")),
+    };
+
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    sqlx::query(
+        "UPDATE streamers SET avatar_url = $1 WHERE user_id = $2"
+    )
+    .bind(new_avatar_url)
+    .bind(&user.id)
+    .execute(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database error: {}", e)))?;
+
+    Ok(())
+}
+
 #[server(SaveMediaRecord, "/api")]
 pub async fn save_media_record(file_name: String, file_url: String, size_bytes: i32) -> Result<(), ServerFnError> {
     let user = match get_me().await? {

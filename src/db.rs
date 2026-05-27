@@ -75,7 +75,8 @@ pub struct DbStreamer {
     pub fallback_media_file: String,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, sqlx::FromRow)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ssr", derive(sqlx::FromRow))]
 pub struct DbStreamerMedia {
     pub id: uuid::Uuid,
     pub streamer_id: i32,

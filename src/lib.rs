@@ -9,6 +9,7 @@ pub mod overlay;
 pub mod pages;
 pub mod s3;
 
+pub mod avatar;
 #[cfg(feature = "ssr")]
 pub mod sitemap;
 

@@ -2992,6 +2992,7 @@ dependencies = [
  "dotenvy",
  "futures",
  "gloo-timers",
+ "js-sys",
  "jsonwebtoken",
  "leptos",
  "leptos-fluent",

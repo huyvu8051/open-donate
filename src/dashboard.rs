@@ -299,10 +299,12 @@ pub fn SettingsPage() -> impl IntoView {
     let streamer = use_context::<crate::db::DbStreamer>().expect("Streamer context missing");
     let update_action = ServerAction::<UpdateStreamerProfile>::new();
     let action_value = update_action.value();
+    let streamer_for_avatar = streamer.clone();
     
     view! {
         <div class="flex flex-col gap-lg max-w-2xl">
             <h1 class="text-headline-lg font-headline-lg text-on-surface">{leptos_fluent::move_tr!("settings-title")}</h1>
+            
             <ActionForm action=update_action>
                 <div class="flex flex-col gap-md bg-surface-container-low/40 backdrop-blur-md border border-white/10 rounded-2xl p-lg">
                     <div class="flex flex-col gap-xs">
@@ -344,6 +346,7 @@ pub fn SettingsPage() -> impl IntoView {
                 </div>
             </ActionForm>
             
+            <crate::avatar::AvatarSettingsSection streamer=streamer_for_avatar />
             <MediaSettingsSection />
         </div>
     }
