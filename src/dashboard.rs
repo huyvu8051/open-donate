@@ -151,7 +151,7 @@ pub fn DashboardHome() -> impl IntoView {
                     let clipboard = window.navigator().clipboard();
                     if let Some(clipboard) = Some(clipboard) { // Using Some(clipboard) to avoid changing indentation or logic structure unnecessarily, but effectively unwrapping it
                         let _ = clipboard.write_text(&full_url);
-                        if let Some(document) = window.document() {
+                        if let Some(_document) = window.document() {
                             let _ = window.alert_with_message("Overlay link copied to clipboard! Paste it as a Browser Source in OBS.");
                         }
                     }

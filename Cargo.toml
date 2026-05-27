@@ -34,6 +34,13 @@ uuid = { version = "1.23.1", features = ["v4", "js"] }
 leptos-fluent = { version = "0.3.1", features = ["axum", "ssr"] }
 argon2 = { version = "0.5.3", optional = true }
 password-hash = { version = "0.6.1", optional = true }
+tracing = { version = "0.1.44", optional = true }
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "registry"], optional = true }
+tracing-opentelemetry = { version = "0.33.0", optional = true }
+opentelemetry = { version = "0.32.0", optional = true }
+opentelemetry_sdk = { version = "0.32.1", features = ["rt-tokio"], optional = true }
+opentelemetry-otlp = { version = "0.32.0", features = ["http-proto", "reqwest-blocking-client", "reqwest-rustls"], optional = true }
+axum-tracing-opentelemetry = { version = "0.38.0", optional = true }
 
 [features]
 hydrate = [
@@ -65,9 +72,23 @@ ssr = [
     "dep:tower-sessions-sqlx-store",
     "dep:argon2",
     "dep:password-hash",
+    "dep:tracing",
+    "dep:tracing-subscriber",
+    "dep:tracing-opentelemetry",
+    "dep:opentelemetry",
+    "dep:opentelemetry_sdk",
+    "dep:opentelemetry-otlp",
+    "dep:axum-tracing-opentelemetry",
 ]
 argon2 = ["dep:argon2"]
 password-hash = ["dep:password-hash"]
+tracing = ["dep:tracing"]
+tracing-subscriber = ["dep:tracing-subscriber"]
+tracing-opentelemetry = ["dep:tracing-opentelemetry"]
+opentelemetry = ["dep:opentelemetry"]
+opentelemetry_sdk = ["dep:opentelemetry_sdk"]
+opentelemetry-otlp = ["dep:opentelemetry-otlp"]
+axum-tracing-opentelemetry = ["dep:axum-tracing-opentelemetry"]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]

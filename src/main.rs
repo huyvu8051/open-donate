@@ -1,8 +1,54 @@
 
 #[cfg(feature = "ssr")]
+fn init_tracing() {
+    use opentelemetry::global;
+    use opentelemetry::KeyValue;
+    use opentelemetry_otlp::SpanExporter;
+    use opentelemetry_otlp::WithExportConfig;
+    use opentelemetry_sdk::trace::SdkTracerProvider;
+    use opentelemetry_sdk::Resource;
+    use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+    let otlp_endpoint = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
+        .unwrap_or_else(|_| "https://otel.unghotui.vn/v1/traces".to_string());
+
+    let exporter = SpanExporter::builder()
+        .with_http()
+        .with_endpoint(otlp_endpoint)
+        .build()
+        .expect("Failed to create OTLP exporter");
+
+    let provider = SdkTracerProvider::builder()
+        .with_batch_exporter(exporter)
+        .with_resource(
+            Resource::builder_empty()
+                .with_attributes(vec![KeyValue::new("service.name", "open-donate")])
+                .build()
+        )
+        .build();
+
+    global::set_tracer_provider(provider.clone());
+    let tracer = global::tracer("open-donate");
+
+    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| "open_donate=debug,info,axum_tracing_opentelemetry=error".into());
+
+    let fmt_layer = tracing_subscriber::fmt::layer();
+
+    tracing_subscriber::registry()
+        .with(filter)
+        .with(fmt_layer)
+        .with(telemetry)
+        .init();
+}
+
+#[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
     let _ = dotenvy::dotenv();
+    init_tracing();
 
     use axum::Router;
     use leptos::logging::log;
@@ -50,6 +96,7 @@ async fn main() {
         .fallback(leptos_axum::file_and_error_handler(shell))
         .layer(axum::Extension(pool))
         .layer(session_layer)
+        .layer(axum_tracing_opentelemetry::middleware::OtelAxumLayer::default())
         .with_state(leptos_options);
 
     // run our app with hyper

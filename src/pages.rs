@@ -3,26 +3,6 @@
 use leptos::prelude::*;
 use crate::app::{Header, Footer};
 
-// ─── Shared helpers ───────────────────────────────────────────────────────────
-
-#[component]
-fn InfoCard(
-    icon: &'static str,
-    icon_color: &'static str,
-    title: String,
-    body: String,
-) -> impl IntoView {
-    view! {
-        <div class="bg-surface-container-low/40 backdrop-blur-md border border-white/10 rounded-2xl p-xl flex flex-col gap-md hover:border-white/20 transition-colors">
-            <div class=format!("w-12 h-12 rounded-xl {} flex items-center justify-center", icon_color)>
-                <span class=format!("material-symbols-outlined {}", icon_color.replace("/20", ""))>{icon}</span>
-            </div>
-            <h2 class="text-headline-md font-headline-md text-on-surface">{title}</h2>
-            <p class="text-body-md text-on-surface-variant leading-relaxed">{body}</p>
-        </div>
-    }
-}
-
 // ─── About Page ──────────────────────────────────────────────────────────────
 
 #[component]
