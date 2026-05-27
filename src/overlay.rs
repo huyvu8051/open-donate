@@ -31,6 +31,8 @@ pub fn OverlayPage() -> impl IntoView {
     #[cfg(feature = "hydrate")]
     let is_playing = RwSignal::new(false);
     #[cfg(feature = "hydrate")]
+    let is_sound_enabled = RwSignal::new(true);
+    #[cfg(feature = "hydrate")]
     let media_cache = RwSignal::new(std::collections::HashMap::<i32, String>::new());
 
     #[cfg(feature = "hydrate")]
@@ -83,7 +85,8 @@ pub fn OverlayPage() -> impl IntoView {
                     }
                     
                     let result = prefetch_upcoming_transactions(tok_inner.clone(), sid_inner.clone()).await;
-                    if let Ok((txs,_overlay_paused, _sound_enabled)) = result {
+                    if let Ok((txs,_overlay_paused, sound_enabled)) = result {
+                        is_sound_enabled.set(sound_enabled);
                         queue.set(txs.clone());
                         
                         // Here we would fetch actual media and store Blob URLs
@@ -136,27 +139,29 @@ pub fn OverlayPage() -> impl IntoView {
                             leptos::logging::log!("Displaying locked tx: {}", tx.id);
                             
                             // Play sound
-                            if let Some(audio) = leptos::prelude::document().get_element_by_id("audio-silence") {
-                                if let Ok(a) = audio.dyn_into::<web_sys::HtmlAudioElement>() {
-                                    if let Ok(promise) = a.play() {
-                                        wasm_bindgen_futures::spawn_local(async move {
-                                            if let Err(_) = wasm_bindgen_futures::JsFuture::from(promise).await {
-                                                interaction_required.set(true);
-                                            }
-                                        });
+                            if is_sound_enabled.get_untracked() {
+                                if let Some(audio) = leptos::prelude::document().get_element_by_id("audio-silence") {
+                                    if let Ok(a) = audio.dyn_into::<web_sys::HtmlAudioElement>() {
+                                        if let Ok(promise) = a.play() {
+                                            wasm_bindgen_futures::spawn_local(async move {
+                                                if let Err(_) = wasm_bindgen_futures::JsFuture::from(promise).await {
+                                                    interaction_required.set(true);
+                                                }
+                                            });
+                                        }
                                     }
                                 }
-                            }
-                            gloo_timers::future::sleep(std::time::Duration::from_secs(1)).await;
-                            
-                            if let Some(audio) = leptos::prelude::document().get_element_by_id("audio-donate") {
-                                if let Ok(a) = audio.dyn_into::<web_sys::HtmlAudioElement>() {
-                                    if let Ok(promise) = a.play() {
-                                        wasm_bindgen_futures::spawn_local(async move {
-                                            if let Err(_) = wasm_bindgen_futures::JsFuture::from(promise).await {
-                                                interaction_required.set(true);
-                                            }
-                                        });
+                                gloo_timers::future::sleep(std::time::Duration::from_secs(1)).await;
+                                
+                                if let Some(audio) = leptos::prelude::document().get_element_by_id("audio-donate") {
+                                    if let Ok(a) = audio.dyn_into::<web_sys::HtmlAudioElement>() {
+                                        if let Ok(promise) = a.play() {
+                                            wasm_bindgen_futures::spawn_local(async move {
+                                                if let Err(_) = wasm_bindgen_futures::JsFuture::from(promise).await {
+                                                    interaction_required.set(true);
+                                                }
+                                            });
+                                        }
                                     }
                                 }
                             }

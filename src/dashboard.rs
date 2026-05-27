@@ -211,26 +211,48 @@ pub fn DashboardHome() -> impl IntoView {
                     </Suspense>
                 </div>
                 
-                <div class="flex flex-wrap items-center gap-2 mb-2">
-                    <ActionForm action=pause_action>
-                        <input type="hidden" name="paused" value=move || (!is_paused.get()).to_string() />
-                        <button type="submit" 
-                            on:click=move |_| set_is_paused.update(|p| *p = !*p)
-                            class=move || format!("inline-flex items-center gap-xs px-md py-sm rounded-xl font-bold transition-all border {}", if is_paused.get() { "bg-error/20 text-error border-error/30 hover:bg-error/30" } else { "bg-surface-container-highest text-on-surface hover:bg-surface-container-highest/80 border-white/10" })>
-                            <span class="material-symbols-outlined text-[18px]">{move || if is_paused.get() { "play_arrow" } else { "pause" }}</span>
-                            <span>{move || if is_paused.get() { "Resume Overlay" } else { "Pause Overlay" }}</span>
-                        </button>
-                    </ActionForm>
+                <div class="flex flex-wrap items-center gap-3 mb-3">
+                    <button type="button" 
+                        on:click=move |_| {
+                            let new_state = !is_paused.get();
+                            set_is_paused.set(new_state);
+                            pause_action.dispatch(crate::app::ToggleOverlayPause { paused: new_state });
+                        }
+                        class=move || format!("group relative flex items-center gap-2 px-5 py-2.5 rounded-full font-bold transition-all duration-300 border overflow-hidden {}", 
+                            if is_paused.get() { 
+                                "bg-orange-500/15 text-orange-400 border-orange-500/40 hover:bg-orange-500/25 shadow-[0_0_15px_rgba(249,115,22,0.15)]" 
+                            } else { 
+                                "bg-surface-container-highest text-on-surface hover:bg-surface-variant border-white/10 shadow-sm" 
+                            }
+                        )>
+                        <span class="material-symbols-outlined text-[20px] transition-transform group-active:scale-90">
+                            {move || if is_paused.get() { "pause_circle" } else { "play_circle" }}
+                        </span>
+                        <span class="text-sm tracking-wide">
+                            {move || if is_paused.get() { "Overlay Paused" } else { "Pause Overlay" }}
+                        </span>
+                    </button>
 
-                    <ActionForm action=sound_action>
-                        <input type="hidden" name="enabled" value=move || (!is_sound.get()).to_string() />
-                        <button type="submit" 
-                            on:click=move |_| set_is_sound.update(|s| *s = !*s)
-                            class=move || format!("inline-flex items-center gap-xs px-md py-sm rounded-xl font-bold transition-all border {}", if is_sound.get() { "bg-surface-container-highest text-on-surface hover:bg-surface-container-highest/80 border-white/10" } else { "bg-surface-variant text-on-surface-variant border-surface-variant/50 hover:bg-surface-variant/80" })>
-                            <span class="material-symbols-outlined text-[18px]">{move || if is_sound.get() { "volume_up" } else { "volume_off" }}</span>
-                            <span>{move || if is_sound.get() { "Mute Sound" } else { "Enable Sound" }}</span>
-                        </button>
-                    </ActionForm>
+                    <button type="button" 
+                        on:click=move |_| {
+                            let new_state = !is_sound.get();
+                            set_is_sound.set(new_state);
+                            sound_action.dispatch(crate::app::ToggleOverlaySound { enabled: new_state });
+                        }
+                        class=move || format!("group relative flex items-center gap-2 px-5 py-2.5 rounded-full font-bold transition-all duration-300 border overflow-hidden {}", 
+                            if is_sound.get() { 
+                                "bg-blue-500/15 text-blue-400 border-blue-500/40 hover:bg-blue-500/25 shadow-[0_0_15px_rgba(59,130,246,0.15)]" 
+                            } else { 
+                                "bg-surface-container-highest text-on-surface/70 hover:bg-surface-variant hover:text-on-surface border-white/10 shadow-sm" 
+                            }
+                        )>
+                        <span class="material-symbols-outlined text-[20px] transition-transform group-active:scale-90">
+                            {move || if is_sound.get() { "volume_up" } else { "volume_off" }}
+                        </span>
+                        <span class="text-sm tracking-wide">
+                            {move || if is_sound.get() { "Sound ON" } else { "Sound OFF" }}
+                        </span>
+                    </button>
                 </div>
                 <div class="flex items-center gap-2">
                     <ActionForm action=test_action>
