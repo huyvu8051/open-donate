@@ -12,6 +12,31 @@ pub fn DashboardLayout() -> impl IntoView {
         }
     });
 
+    let location = leptos_router::hooks::use_location();
+    let path = move || location.pathname.get();
+    
+    let is_active = move |p: &str| path() == p || (p == "/dashboard" && path() == "/dashboard/");
+    
+    let nav_class = move |p: &'static str| {
+        move || {
+            if is_active(p) {
+                "flex items-center gap-sm p-sm rounded-xl transition-all bg-surface-variant/50 text-primary font-bold"
+            } else {
+                "flex items-center gap-sm p-sm rounded-xl transition-all text-on-surface-variant hover:bg-surface-variant/50"
+            }
+        }
+    };
+
+    let mob_nav_class = move |p: &'static str| {
+        move || {
+            if is_active(p) {
+                "flex flex-col items-center gap-1 text-primary w-16 font-bold"
+            } else {
+                "flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16 font-medium"
+            }
+        }
+    };
+
     view! {
         <Transition fallback=move || view! { <div class="p-8 text-center">{leptos_fluent::move_tr!("dashboard-loading")}</div> }>
             {move || {
@@ -31,19 +56,19 @@ pub fn DashboardLayout() -> impl IntoView {
                                             <p class="text-label-sm font-label-sm text-on-surface-variant">{leptos_fluent::move_tr!("nav-manage-account")}</p>
                                         </div>
                                         <nav class="flex-1 flex flex-col gap-xs">
-                                            <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="/dashboard">
+                                            <a class=nav_class("/dashboard") href="/dashboard">
                                                 <span class="material-symbols-outlined">"dashboard"</span>
                                                 <span class="text-label-md font-label-md">{leptos_fluent::move_tr!("nav-dashboard")}</span>
                                             </a>
-                                            <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="/dashboard/analytics">
+                                            <a class=nav_class("/dashboard/analytics") href="/dashboard/analytics">
                                                 <span class="material-symbols-outlined">"monitoring"</span>
                                                 <span class="text-label-md font-label-md">{leptos_fluent::move_tr!("nav-analytics")}</span>
                                             </a>
-                                            <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="/dashboard/payments">
+                                            <a class=nav_class("/dashboard/payments") href="/dashboard/payments">
                                                 <span class="material-symbols-outlined">"payments"</span>
                                                 <span class="text-label-md font-label-md">{leptos_fluent::move_tr!("nav-payments")}</span>
                                             </a>
-                                            <a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="/dashboard/settings">
+                                            <a class=nav_class("/dashboard/settings") href="/dashboard/settings">
                                                 <span class="material-symbols-outlined">"settings"</span>
                                                 <span class="text-label-md font-label-md">{leptos_fluent::move_tr!("nav-settings")}</span>
                                             </a>
@@ -64,38 +89,39 @@ pub fn DashboardLayout() -> impl IntoView {
                                         </div>
                                     </aside>
                                     
-                                    // Main Content
-                                    <main class="md:ml-64 pt-32 px-margin-mobile md:px-margin-desktop pb-24 md:pb-xl min-h-screen">
-                                        <div class="max-w-7xl mx-auto">
-                                            <S3StatusBanner />
-                                            <Outlet />
+                                    // Main Content & Footer inside the md:ml-64 container to prevent overlapping
+                                    <div class="md:ml-64 flex flex-col min-h-screen pt-20">
+                                        <main class="pt-12 px-margin-mobile md:px-margin-desktop pb-24 md:pb-xl flex-grow">
+                                            <div class="max-w-7xl mx-auto">
+                                                <S3StatusBanner />
+                                                <Outlet />
+                                            </div>
+                                        </main>
+                                        <Footer />
                                     </div>
-                                </main>
 
                                     // Mobile Bottom Navigation
                                     <nav class="fixed bottom-0 w-full bg-surface-container-low/90 backdrop-blur-xl border-t border-white/10 flex justify-around items-center h-16 z-50 md:hidden pb-safe">
-                                        <a href="/dashboard" class="flex flex-col items-center gap-1 text-primary w-16">
+                                        <a href="/dashboard" class=mob_nav_class("/dashboard")>
                                             <span class="material-symbols-outlined text-[24px]">"dashboard"</span>
-                                            <span class="text-[10px] font-bold leading-none">{leptos_fluent::move_tr!("nav-dashboard")}</span>
+                                            <span class="text-[10px] leading-none">{leptos_fluent::move_tr!("nav-dashboard")}</span>
                                         </a>
-                                        <a href="/dashboard/analytics" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16">
+                                        <a href="/dashboard/analytics" class=mob_nav_class("/dashboard/analytics")>
                                             <span class="material-symbols-outlined text-[24px]">"monitoring"</span>
-                                            <span class="text-[10px] font-medium leading-none">{leptos_fluent::move_tr!("nav-analytics")}</span>
+                                            <span class="text-[10px] leading-none">{leptos_fluent::move_tr!("nav-analytics")}</span>
                                         </a>
                                         <button class="relative -top-5 w-12 h-12 bg-gradient-to-tr from-primary to-primary-container rounded-full shadow-lg shadow-primary/30 flex items-center justify-center text-on-primary active:scale-95 transition-transform border-4 border-background">
                                             <span class="material-symbols-outlined text-[24px]">"videocam"</span>
                                         </button>
-                                        <a href="/dashboard/payments" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16">
+                                        <a href="/dashboard/payments" class=mob_nav_class("/dashboard/payments")>
                                             <span class="material-symbols-outlined text-[24px]">"payments"</span>
-                                            <span class="text-[10px] font-medium leading-none">{leptos_fluent::move_tr!("nav-payments")}</span>
+                                            <span class="text-[10px] leading-none">{leptos_fluent::move_tr!("nav-payments")}</span>
                                         </a>
-                                        <a href="/dashboard/settings" class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16">
+                                        <a href="/dashboard/settings" class=mob_nav_class("/dashboard/settings")>
                                             <span class="material-symbols-outlined text-[24px]">"settings"</span>
-                                            <span class="text-[10px] font-medium leading-none">{leptos_fluent::move_tr!("nav-settings")}</span>
+                                            <span class="text-[10px] leading-none">{leptos_fluent::move_tr!("nav-settings")}</span>
                                         </a>
                                     </nav>
-
-                                    <Footer />
 
                                     // Interactive Layer: Atmospheric Glow
                                     <div class="fixed top-0 left-0 w-full h-full -z-10 pointer-events-none">
@@ -536,6 +562,31 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
                 </div>
             </div>
             
+            <div class="flex justify-between items-center py-sm mb-md border-b border-white/10">
+                <p class="text-label-sm font-label-sm text-on-surface-variant">
+                    {leptos_fluent::move_tr!("dashboard-showing")} " " {move || start_idx()} " " {leptos_fluent::move_tr!("dashboard-to")} " " {move || end_idx()} " " {leptos_fluent::move_tr!("dashboard-of")} " " {move || total_count()} " " {leptos_fluent::move_tr!("dashboard-donations")}
+                </p>
+                <div class="flex gap-xs">
+                    <button
+                        class="w-10 h-10 flex items-center justify-center rounded-lg bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/50 disabled:opacity-30"
+                        disabled={move || page.get() <= 1}
+                        on:click=move |_| set_page.update(|p| if *p > 1 { *p -= 1 })
+                    >
+                        <span class="material-symbols-outlined">"chevron_left"</span>
+                    </button>
+                    <span class="w-10 h-10 flex items-center justify-center rounded-lg bg-primary text-on-primary font-bold text-label-md">
+                        {move || page.get()}
+                    </span>
+                    <button
+                        class="w-10 h-10 flex items-center justify-center rounded-lg bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/50 disabled:opacity-30"
+                        disabled={move || page.get() >= _total_pages.get()}
+                        on:click=move |_| set_page.update(|p| if *p < _total_pages.get() { *p += 1 })
+                    >
+                        <span class="material-symbols-outlined">"chevron_right"</span>
+                    </button>
+                </div>
+            </div>
+            
             <div class="overflow-x-auto custom-scrollbar">
                 <table class="w-full text-left border-collapse min-w-[700px]">
                     <thead>
@@ -620,31 +671,6 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
                         </Suspense>
                     </tbody>
                 </table>
-            </div>
-            
-            <div class="flex justify-between items-center pt-md border-t border-white/10">
-                <p class="text-label-sm font-label-sm text-on-surface-variant">
-                    {leptos_fluent::move_tr!("dashboard-showing")} " " {move || start_idx()} " " {leptos_fluent::move_tr!("dashboard-to")} " " {move || end_idx()} " " {leptos_fluent::move_tr!("dashboard-of")} " " {move || total_count()} " " {leptos_fluent::move_tr!("dashboard-donations")}
-                </p>
-                <div class="flex gap-xs">
-                    <button
-                        class="w-10 h-10 flex items-center justify-center rounded-lg bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/50 disabled:opacity-30"
-                        disabled={move || page.get() <= 1}
-                        on:click=move |_| set_page.update(|p| if *p > 1 { *p -= 1 })
-                    >
-                        <span class="material-symbols-outlined">"chevron_left"</span>
-                    </button>
-                    <span class="w-10 h-10 flex items-center justify-center rounded-lg bg-primary text-on-primary font-bold text-label-md">
-                        {move || page.get()}
-                    </span>
-                    <button
-                        class="w-10 h-10 flex items-center justify-center rounded-lg bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/50 disabled:opacity-30"
-                        disabled={move || page.get() >= _total_pages.get()}
-                        on:click=move |_| set_page.update(|p| if *p < _total_pages.get() { *p += 1 })
-                    >
-                        <span class="material-symbols-outlined">"chevron_right"</span>
-                    </button>
-                </div>
             </div>
         </div>
     }

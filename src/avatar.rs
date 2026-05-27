@@ -53,14 +53,14 @@ pub fn AvatarSettingsSection(streamer: crate::db::DbStreamer) -> impl IntoView {
     };
 
     let (is_cropping, set_is_cropping) = signal(false);
-    let (selected_data_url, set_selected_data_url) = signal(None::<String>);
-    let cropper_instance = StoredValue::new(None::<CropperType>);
+    let (selected_data_url, _set_selected_data_url) = signal(None::<String>);
+    let _cropper_instance = StoredValue::new(None::<CropperType>);
     
-    let on_file_change = move |ev| {
+    let on_file_change = move |_ev| {
         #[cfg(feature = "hydrate")]
         {
             use wasm_bindgen::JsCast;
-            let target = event_target::<web_sys::HtmlInputElement>(&ev);
+            let target = event_target::<web_sys::HtmlInputElement>(&_ev);
             if let Some(files) = target.files() {
                 if let Some(file) = files.get(0) {
                     let reader = web_sys::FileReader::new().unwrap();
@@ -68,16 +68,16 @@ pub fn AvatarSettingsSection(streamer: crate::db::DbStreamer) -> impl IntoView {
                     let closure = Closure::wrap(Box::new(move || {
                         if let Some(result) = reader_clone.result().ok() {
                             if let Some(data_url) = result.as_string() {
-                                set_selected_data_url.set(Some(data_url));
+                                _set_selected_data_url.set(Some(data_url));
                                 set_is_cropping.set(true);
                                 
                                 // Initialize cropper after a short delay so image is rendered
                                 gloo_timers::callback::Timeout::new(100, move || {
-                                    if let Some(c) = cropper_instance.get_value() {
+                                    if let Some(_c) = _cropper_instance.get_value() {
                                         // clean up old
                                     }
                                     let cropper = init_cropper("avatar-crop-img");
-                                    cropper_instance.set_value(Some(cropper));
+                                    _cropper_instance.set_value(Some(cropper));
                                 }).forget();
                             }
                         }
@@ -90,13 +90,13 @@ pub fn AvatarSettingsSection(streamer: crate::db::DbStreamer) -> impl IntoView {
         }
     };
     
-    let (upload_status, set_upload_status) = signal("".to_string());
+    let (upload_status, _set_upload_status) = signal("".to_string());
     
     let on_crop_save = move |_| {
         #[cfg(feature = "hydrate")]
         {
-            set_upload_status.set("Processing...".to_string());
-            if let Some(cropper) = cropper_instance.get_value() {
+            _set_upload_status.set("Saving...".to_string());
+            if let Some(cropper) = _cropper_instance.get_value() {
                 leptos::task::spawn_local(async move {
                     use wasm_bindgen_futures::JsFuture;
                     if let Ok(blob_val) = JsFuture::from(get_cropped_blob(&cropper)).await {
@@ -115,16 +115,16 @@ pub fn AvatarSettingsSection(streamer: crate::db::DbStreamer) -> impl IntoView {
                                         if resp.ok() {
                                             let _ = update_avatar.dispatch(crate::app::UpdateAvatarUrl { new_avatar_url: public_url.clone() });
                                             set_current_avatar.set(public_url);
-                                            set_upload_status.set("Upload successful!".to_string());
+                                            _set_upload_status.set("Upload successful!".to_string());
                                             set_is_cropping.set(false);
                                         } else {
-                                            set_upload_status.set("S3 Upload Failed".to_string());
+                                            _set_upload_status.set("S3 Upload Failed".to_string());
                                         }
                                     }
                                 }
                             }
                             Err(_) => {
-                                set_upload_status.set("Failed to get presigned URL".to_string());
+                                _set_upload_status.set("Failed to get presigned URL".to_string());
                             }
                         }
                     }
