@@ -9,101 +9,84 @@ use wasm_bindgen::prelude::*;
 
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen(inline_js = r#"
-function waitForEcharts(fn) {
-    if (window.echarts) { fn(); return; }
-    let attempts = 0;
-    let id = setInterval(() => {
-        attempts++;
-        if (window.echarts) { clearInterval(id); fn(); }
-        else if (attempts > 100) { clearInterval(id); console.warn('ECharts failed to load'); }
-    }, 50);
-}
-
 export function init_echarts_line(dom_id, x_data, y_data, series_name, color) {
-    waitForEcharts(() => {
-        let dom = document.getElementById(dom_id);
-        if (!dom) return;
-        let chart = echarts.init(dom, 'dark', { renderer: 'canvas' });
-        chart.setOption({
-            backgroundColor: 'transparent',
-            tooltip: { trigger: 'axis', formatter: function(p) { return p[0].name + '<br/>' + p[0].seriesName + ': $' + p[0].value.toFixed(2); } },
-            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-            xAxis: { type: 'category', data: x_data, axisLine: { lineStyle: { color: '#ffffff30' } }, axisLabel: { color: '#aaa', fontSize: 11 } },
-            yAxis: { type: 'value', axisLabel: { color: '#aaa', formatter: '${value}' }, splitLine: { lineStyle: { color: '#ffffff10' } } },
-            series: [{ name: series_name, type: 'line', smooth: true, data: y_data,
-                lineStyle: { color: color, width: 3 },
-                itemStyle: { color: color },
-                areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-                    colorStops: [{ offset: 0, color: color + '60' }, { offset: 1, color: color + '00' }] } }
-            }]
-        });
-        window.addEventListener('resize', () => chart.resize());
+    let dom = document.getElementById(dom_id);
+    if (!dom) return;
+    let chart = echarts.init(dom, 'dark', { renderer: 'canvas' });
+    chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis', formatter: function(p) { return p[0].name + '<br/>' + p[0].seriesName + ': $' + p[0].value.toFixed(2); } },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: { type: 'category', data: x_data, axisLine: { lineStyle: { color: '#ffffff30' } }, axisLabel: { color: '#aaa', fontSize: 11 } },
+        yAxis: { type: 'value', axisLabel: { color: '#aaa', formatter: '${value}' }, splitLine: { lineStyle: { color: '#ffffff10' } } },
+        series: [{ name: series_name, type: 'line', smooth: true, data: y_data,
+            lineStyle: { color: color, width: 3 },
+            itemStyle: { color: color },
+            areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+                colorStops: [{ offset: 0, color: color + '60' }, { offset: 1, color: color + '00' }] } }
+        }]
     });
+    window.addEventListener('resize', () => chart.resize());
 }
 
 export function init_echarts_hbar(dom_id, names, values, color) {
-    waitForEcharts(() => {
-        let dom = document.getElementById(dom_id);
-        if (!dom) return;
-        let chart = echarts.init(dom, 'dark', { renderer: 'canvas' });
-        chart.setOption({
-            backgroundColor: 'transparent',
-            tooltip: { trigger: 'axis', formatter: function(p) { return p[0].name + ': $' + p[0].value.toFixed(2); } },
-            grid: { left: '3%', right: '8%', bottom: '3%', top: '3%', containLabel: true },
-            xAxis: { type: 'value', axisLabel: { color: '#aaa', formatter: '${value}' }, splitLine: { lineStyle: { color: '#ffffff10' } } },
-            yAxis: { type: 'category', data: names, axisLabel: { color: '#ccc', fontSize: 12 } },
-            series: [{ type: 'bar', data: values, barMaxWidth: 28,
-                itemStyle: { color: color, borderRadius: [0, 6, 6, 0] },
-                label: { show: true, position: 'right', formatter: function(p) { return '$' + p.value.toFixed(2); }, color: '#ccc', fontSize: 11 }
-            }]
-        });
-        window.addEventListener('resize', () => chart.resize());
+    let dom = document.getElementById(dom_id);
+    if (!dom) return;
+    let chart = echarts.init(dom, 'dark', { renderer: 'canvas' });
+    chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis', formatter: function(p) { return p[0].name + ': $' + p[0].value.toFixed(2); } },
+        grid: { left: '3%', right: '8%', bottom: '3%', top: '3%', containLabel: true },
+        xAxis: { type: 'value', axisLabel: { color: '#aaa', formatter: '${value}' }, splitLine: { lineStyle: { color: '#ffffff10' } } },
+        yAxis: { type: 'category', data: names, axisLabel: { color: '#ccc', fontSize: 12 } },
+        series: [{ type: 'bar', data: values, barMaxWidth: 28,
+            itemStyle: { color: color, borderRadius: [0, 6, 6, 0] },
+            label: { show: true, position: 'right', formatter: function(p) { return '$' + p.value.toFixed(2); }, color: '#ccc', fontSize: 11 }
+        }]
     });
+    window.addEventListener('resize', () => chart.resize());
 }
 
 export function init_echarts_pie(dom_id, data_json) {
-    waitForEcharts(() => {
-        let dom = document.getElementById(dom_id);
-        if (!dom) return;
-        let chart = echarts.init(dom, 'dark', { renderer: 'canvas' });
-        let data = JSON.parse(data_json);
-        let colors = ['#6750A4', '#B58392', '#7C9A92', '#E8A838', '#4FC3F7', '#81C784'];
-        chart.setOption({
-            backgroundColor: 'transparent',
-            tooltip: { trigger: 'item', formatter: '{b}: {c} donations ({d}%)' },
-            legend: { orient: 'vertical', right: 10, top: 'center', textStyle: { color: '#ccc' } },
-            series: [{
-                type: 'pie', radius: ['45%', '75%'], center: ['38%', '50%'],
-                avoidLabelOverlap: false,
-                label: { show: false },
-                emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
-                data: data.map(function(d, i) { return { name: d[0], value: d[1], itemStyle: { color: colors[i % colors.length] } }; })
-            }]
-        });
-        window.addEventListener('resize', () => chart.resize());
+    let dom = document.getElementById(dom_id);
+    if (!dom) return;
+    let chart = echarts.init(dom, 'dark', { renderer: 'canvas' });
+    let data = JSON.parse(data_json);
+    let colors = ['#6750A4', '#B58392', '#7C9A92', '#E8A838', '#4FC3F7', '#81C784'];
+    chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'item', formatter: '{b}: {c} donations ({d}%)' },
+        legend: { orient: 'vertical', right: 10, top: 'center', textStyle: { color: '#ccc' } },
+        series: [{
+            type: 'pie', radius: ['45%', '75%'], center: ['38%', '50%'],
+            avoidLabelOverlap: false,
+            label: { show: false },
+            emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
+            data: data.map(function(d, i) { return { name: d[0], value: d[1], itemStyle: { color: colors[i % colors.length] } }; })
+        }]
     });
+    window.addEventListener('resize', () => chart.resize());
 }
 
 export function init_echarts_vbar(dom_id, x_data, y_data, color) {
-    waitForEcharts(() => {
-        let dom = document.getElementById(dom_id);
-        if (!dom) return;
-        let chart = echarts.init(dom, 'dark', { renderer: 'canvas' });
-        chart.setOption({
-            backgroundColor: 'transparent',
-            tooltip: { trigger: 'axis', formatter: function(p) { return p[0].name + ': ' + p[0].value + ' donations'; } },
-            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-            xAxis: { type: 'category', data: x_data, axisLabel: { color: '#aaa', fontSize: 11 } },
-            yAxis: { type: 'value', axisLabel: { color: '#aaa' }, splitLine: { lineStyle: { color: '#ffffff10' } }, minInterval: 1 },
-            series: [{ type: 'bar', data: y_data, barMaxWidth: 52,
-                itemStyle: { color: color, borderRadius: [6, 6, 0, 0] },
-                label: { show: true, position: 'top', color: '#ccc', fontSize: 12 }
-            }]
-        });
-        window.addEventListener('resize', () => chart.resize());
+    let dom = document.getElementById(dom_id);
+    if (!dom) return;
+    let chart = echarts.init(dom, 'dark', { renderer: 'canvas' });
+    chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis', formatter: function(p) { return p[0].name + ': ' + p[0].value + ' donations'; } },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: { type: 'category', data: x_data, axisLabel: { color: '#aaa', fontSize: 11 } },
+        yAxis: { type: 'value', axisLabel: { color: '#aaa' }, splitLine: { lineStyle: { color: '#ffffff10' } }, minInterval: 1 },
+        series: [{ type: 'bar', data: y_data, barMaxWidth: 52,
+            itemStyle: { color: color, borderRadius: [6, 6, 0, 0] },
+            label: { show: true, position: 'top', color: '#ccc', fontSize: 12 }
+        }]
     });
+    window.addEventListener('resize', () => chart.resize());
 }
 "#)]
+#[cfg(feature = "hydrate")]
 extern "C" {
     pub fn init_echarts_line(
         dom_id: &str,
@@ -190,6 +173,8 @@ fn ChartCard(
 pub fn AnalyticsPage() -> impl IntoView {
     let streamer = use_context::<crate::db::DbStreamer>().expect("Streamer context missing");
     let (time_range, set_time_range) = signal("week".to_string());
+    // ← The key fix: track when ECharts CDN has finished loading
+    let (echarts_ready, set_echarts_ready) = signal(false);
 
     let analytics_resource = LocalResource::new(move || {
         let streamer_id = streamer.id;
@@ -198,8 +183,11 @@ pub fn AnalyticsPage() -> impl IntoView {
     });
 
     view! {
-        // Lazy-load ECharts only on analytics page
-        <Script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"/>
+        // Script fires on:load → sets echarts_ready = true
+        <Script
+            src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"
+            on:load=move |_| set_echarts_ready.set(true)
+        />
 
         <div class="flex flex-col gap-lg mb-xl">
             // Header + time range toggle
@@ -236,12 +224,19 @@ pub fn AnalyticsPage() -> impl IntoView {
                             {format!("Failed to load analytics: {:?}", e)}
                         </div>
                     }.into_any(),
-                    Ok(analytics) => {
-                        let a = analytics.clone();
-                        view! {
-                            <AnalyticsDashboard analytics=a />
-                        }.into_any()
-                    }
+                    Ok(analytics) => view! {
+                        // Only render charts after ECharts script is loaded
+                        <Show
+                            when=move || echarts_ready.get()
+                            fallback=move || view! {
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-md animate-pulse">
+                                    {(0..4).map(|_| view! { <div class="h-28 bg-surface-container-low/40 rounded-2xl"/> }).collect_view()}
+                                </div>
+                            }
+                        >
+                            <AnalyticsDashboard analytics=analytics.clone() />
+                        </Show>
+                    }.into_any()
                 })}
             </Suspense>
         </div>
