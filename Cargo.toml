@@ -41,6 +41,7 @@ opentelemetry = { version = "0.32.0", optional = true }
 opentelemetry_sdk = { version = "0.32.1", features = ["rt-tokio"], optional = true }
 opentelemetry-otlp = { version = "0.32.0", features = ["http-proto", "reqwest-blocking-client", "reqwest-rustls"], optional = true }
 axum-tracing-opentelemetry = { version = "0.38.0", optional = true }
+opentelemetry-appender-tracing = { version = "0.32.0", optional = true }
 
 [features]
 hydrate = [
@@ -79,6 +80,7 @@ ssr = [
     "dep:opentelemetry_sdk",
     "dep:opentelemetry-otlp",
     "dep:axum-tracing-opentelemetry",
+    "dep:opentelemetry-appender-tracing",
 ]
 argon2 = ["dep:argon2"]
 password-hash = ["dep:password-hash"]
@@ -89,6 +91,7 @@ opentelemetry = ["dep:opentelemetry"]
 opentelemetry_sdk = ["dep:opentelemetry_sdk"]
 opentelemetry-otlp = ["dep:opentelemetry-otlp"]
 axum-tracing-opentelemetry = ["dep:axum-tracing-opentelemetry"]
+opentelemetry-appender-tracing = ["dep:opentelemetry-appender-tracing"]
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]

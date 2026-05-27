@@ -3,11 +3,13 @@
 fn init_tracing() {
     use opentelemetry::global;
     use opentelemetry::KeyValue;
-    use opentelemetry_otlp::SpanExporter;
+    use opentelemetry_otlp::{SpanExporter, LogExporter};
     use opentelemetry_otlp::WithExportConfig;
     use opentelemetry_sdk::trace::SdkTracerProvider;
+    use opentelemetry_sdk::logs::SdkLoggerProvider;
     use opentelemetry_sdk::Resource;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+    use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 
     let otlp_endpoint = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
         .unwrap_or_else(|_| "https://otel.unghotui.vn/v1/traces".to_string());
@@ -32,6 +34,27 @@ fn init_tracing() {
 
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
 
+    // Setup Log Exporter
+    let otlp_logs_endpoint = std::env::var("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT")
+        .unwrap_or_else(|_| "https://otel.unghotui.vn/v1/logs".to_string());
+
+    let log_exporter = LogExporter::builder()
+        .with_http()
+        .with_endpoint(otlp_logs_endpoint)
+        .build()
+        .expect("Failed to create OTLP log exporter");
+
+    let logger_provider = SdkLoggerProvider::builder()
+        .with_batch_exporter(log_exporter)
+        .with_resource(
+            Resource::builder_empty()
+                .with_attributes(vec![KeyValue::new("service.name", "open-donate")])
+                .build()
+        )
+        .build();
+
+    let log_layer = OpenTelemetryTracingBridge::new(&logger_provider);
+
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| "open_donate=debug,info,axum_tracing_opentelemetry=error".into());
 
@@ -41,6 +64,7 @@ fn init_tracing() {
         .with(filter)
         .with(fmt_layer)
         .with(telemetry)
+        .with(log_layer)
         .init();
 }
 
