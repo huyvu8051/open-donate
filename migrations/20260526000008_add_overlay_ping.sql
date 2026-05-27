@@ -1,0 +1,1 @@
+ALTER TABLE streamers ADD COLUMN last_overlay_ping TIMESTAMP WITH TIME ZONE;

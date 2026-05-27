@@ -1825,6 +1825,11 @@ pub async fn poll_overlay_transactions(token: String, session_id: String) -> Res
 
     let streamer_id: i32 = streamer.get("id");
 
+    let _ = sqlx::query("UPDATE streamers SET last_overlay_ping = CURRENT_TIMESTAMP WHERE id = $1")
+        .bind(streamer_id)
+        .execute(&pool)
+        .await;
+
     let rows = sqlx::query(
         "SELECT t.id, t.streamer_id, t.donor_name, t.amount, t.message, t.payment_method, t.status, TO_CHAR(t.created_at, 'YYYY-MM-DD HH:MI AM') as formatted_date 
          FROM transactions t
@@ -1850,4 +1855,75 @@ pub async fn poll_overlay_transactions(token: String, session_id: String) -> Res
             created_at: r.get("formatted_date"),
         })
         .collect())
+}
+
+#[server(GetOverlayStatus, "/api")]
+pub async fn get_overlay_status() -> Result<bool, ServerFnError> {
+    use crate::auth::get_user_from_session;
+    let user = match get_user_from_session().await {
+        Ok(Some(u)) => u,
+        _ => return Err(ServerFnError::new("Unauthorized")),
+    };
+
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    let row = sqlx::query(
+        "SELECT last_overlay_ping FROM streamers WHERE user_id = $1"
+    )
+    .bind(user.id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database error: {}", e)))?;
+
+    use sqlx::Row;
+    if let Some(r) = row {
+        if let Ok(ping) = r.try_get::<chrono::DateTime<chrono::Utc>, _>("last_overlay_ping") {
+            let now = chrono::Utc::now();
+            if now.signed_duration_since(ping).num_seconds() <= 10 {
+                return Ok(true);
+            }
+        }
+    }
+    
+    Ok(false)
+}
+
+#[server(TestOverlayDonation, "/api")]
+pub async fn test_overlay_donation() -> Result<(), ServerFnError> {
+    use crate::auth::get_user_from_session;
+    let user = match get_user_from_session().await {
+        Ok(Some(u)) => u,
+        _ => return Err(ServerFnError::new("Unauthorized")),
+    };
+
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    let row = sqlx::query("SELECT id FROM streamers WHERE user_id = $1")
+        .bind(user.id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| ServerFnError::new(format!("Database error: {}", e)))?;
+
+    use sqlx::Row;
+    let streamer_id: i32 = match row {
+        Some(r) => r.get("id"),
+        None => return Err(ServerFnError::new("Streamer not found")),
+    };
+
+    sqlx::query(
+        "INSERT INTO transactions (streamer_id, donor_name, amount, message, payment_method, status)
+         VALUES ($1, $2, $3, $4, $5, 'READY_FOR_DISPLAY')"
+    )
+    .bind(streamer_id)
+    .bind("System Test")
+    .bind(5.0)
+    .bind("This is a test donation for your overlay!")
+    .bind("test_mock")
+    .execute(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Failed to insert test donation: {}", e)))?;
+
+    Ok(())
 }

@@ -138,7 +138,44 @@ pub fn DashboardLayout() -> impl IntoView {
 #[component]
 pub fn DashboardHome() -> impl IntoView {
     let streamer = use_context::<crate::db::DbStreamer>().expect("Streamer context missing");
-    let overlay_url = format!("/overlay/{}", streamer.username);
+    
+    // Copy overlay link logic
+    #[allow(unused_variables)]
+    let token = streamer.overlay_token.clone();
+    let copy_to_clipboard = move |_| {
+        #[cfg(feature = "hydrate")]
+        {
+            if let Some(window) = web_sys::window() {
+                if let Ok(origin) = window.location().origin() {
+                    let full_url = format!("{}/overlay/{}", origin, token);
+                    if let Some(clipboard) = window.navigator().clipboard() {
+                        let _ = clipboard.write_text(&full_url);
+                        if let Some(document) = window.document() {
+                            let _ = window.alert_with_message("Overlay link copied to clipboard! Paste it as a Browser Source in OBS.");
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    // Overlay Status polling
+    let tick = RwSignal::new(0);
+    #[cfg(feature = "hydrate")]
+    {
+        use gloo_timers::callback::Interval;
+        let poll_interval: StoredValue<Option<Interval>, leptos::prelude::LocalStorage> = StoredValue::new_local(None);
+        let interval = Interval::new(5000, move || {
+            tick.update(|t| *t += 1);
+        });
+        poll_interval.set_value(Some(interval));
+    }
+    
+    let status_resource = Resource::new(move || tick.get(), |_| async move {
+        crate::app::get_overlay_status().await.unwrap_or(false)
+    });
+
+    let test_action = ServerAction::<crate::app::TestOverlayDonation>::new();
 
     view! {
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
@@ -148,15 +185,46 @@ pub fn DashboardHome() -> impl IntoView {
                     {leptos_fluent::move_tr!("dashboard-welcome-back")} {streamer.display_name.clone()} {leptos_fluent::move_tr!("dashboard-creator-hub-ready")}
                 </p>
             </div>
-            <a
-                class="inline-flex items-center gap-xs px-md py-sm rounded-xl bg-primary-container text-on-primary-container font-bold hover:brightness-110 transition-all active:scale-[0.98]"
-                href=overlay_url.clone()
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-                <span class="material-symbols-outlined text-[20px]">"open_in_new"</span>
-                <span>{leptos_fluent::move_tr!("dashboard-open-overlay")}</span>
-            </a>
+            <div class="flex flex-col md:items-end gap-2">
+                <div class="flex items-center gap-2">
+                    <Suspense fallback=move || view! { <span class="text-on-surface-variant text-label-sm">"Checking status..."</span> }>
+                        {move || {
+                            let is_active = status_resource.get().unwrap_or(false);
+                            if is_active {
+                                view! { <div class="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/20 text-green-400 rounded-full text-label-sm font-semibold border border-green-500/30">
+                                    <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                    "Overlay Active"
+                                </div> }.into_any()
+                            } else {
+                                view! { <div class="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/20 text-red-400 rounded-full text-label-sm font-semibold border border-red-500/30">
+                                    <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                                    "Overlay Inactive"
+                                </div> }.into_any()
+                            }
+                        }}
+                    </Suspense>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <ActionForm action=test_action>
+                        <button type="submit" 
+                            class=move || format!("inline-flex items-center gap-xs px-md py-sm rounded-xl bg-surface-container-highest text-on-surface font-bold hover:bg-surface-container-highest/80 transition-all border border-white/10 {}", if test_action.pending().get() { "opacity-50" } else { "" })
+                            disabled=move || test_action.pending().get()
+                        >
+                            <span class="material-symbols-outlined text-[18px]">"science"</span>
+                            <span>"Test Overlay"</span>
+                        </button>
+                    </ActionForm>
+
+                    <button
+                        on:click=copy_to_clipboard
+                        class="inline-flex items-center gap-xs px-md py-sm rounded-xl bg-primary-container text-on-primary-container font-bold hover:brightness-110 transition-all active:scale-[0.98]"
+                    >
+                        <span class="material-symbols-outlined text-[18px]">"content_copy"</span>
+                        <span>"Copy Overlay Link"</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <DonationHistory streamer_id={streamer.id} />
