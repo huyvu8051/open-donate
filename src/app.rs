@@ -2061,11 +2061,10 @@ pub async fn get_streamer_media() -> Result<Vec<crate::db::DbStreamerMedia>, Ser
         .await
         .map_err(|e| ServerFnError::new(format!("Streamer not found: {}", e)))?;
 
-    let rows = sqlx::query_as!(
-        crate::db::DbStreamerMedia,
-        "SELECT id, streamer_id, file_name, file_url, size_bytes, TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as \"created_at!\" FROM streamer_media WHERE streamer_id = $1 ORDER BY created_at DESC",
-        streamer_id
+    let rows = sqlx::query_as::<_, crate::db::DbStreamerMedia>(
+        "SELECT id, streamer_id, file_name, file_url, size_bytes, TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS') as created_at FROM streamer_media WHERE streamer_id = $1 ORDER BY created_at DESC"
     )
+    .bind(streamer_id)
     .fetch_all(&pool)
     .await
     .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;

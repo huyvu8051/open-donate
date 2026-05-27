@@ -75,14 +75,14 @@ pub struct DbStreamer {
     pub fallback_media_file: String,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, sqlx::FromRow)]
 pub struct DbStreamerMedia {
     pub id: uuid::Uuid,
     pub streamer_id: i32,
     pub file_name: String,
     pub file_url: String,
     pub size_bytes: i32,
-    pub created_at: String,
+    pub created_at: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
