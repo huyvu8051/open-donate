@@ -118,7 +118,7 @@ pub fn DashboardLayout() -> impl IntoView {
                         Ok(None) => view! {
                             <div class="p-8 text-center flex flex-col items-center justify-center min-h-[50vh] gap-md">
                                 <p class="text-on-surface-variant text-body-lg">{leptos_fluent::move_tr!("dashboard-must-login")}</p>
-                                <a href="/api/auth/login" class="bg-primary text-on-primary px-xl py-md rounded-xl font-bold hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20">
+                                <a href="/login" class="bg-primary text-on-primary px-xl py-md rounded-xl font-bold hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20">
                                     {leptos_fluent::move_tr!("dashboard-login-btn")}
                                 </a>
                             </div>
@@ -148,7 +148,8 @@ pub fn DashboardHome() -> impl IntoView {
             if let Some(window) = web_sys::window() {
                 if let Ok(origin) = window.location().origin() {
                     let full_url = format!("{}/overlay/{}", origin, token);
-                    if let Some(clipboard) = window.navigator().clipboard() {
+                    let clipboard = window.navigator().clipboard();
+                    if let Some(clipboard) = Some(clipboard) { // Using Some(clipboard) to avoid changing indentation or logic structure unnecessarily, but effectively unwrapping it
                         let _ = clipboard.write_text(&full_url);
                         if let Some(document) = window.document() {
                             let _ = window.alert_with_message("Overlay link copied to clipboard! Paste it as a Browser Source in OBS.");
@@ -191,12 +192,12 @@ pub fn DashboardHome() -> impl IntoView {
                         {move || {
                             let is_active = status_resource.get().unwrap_or(false);
                             if is_active {
-                                view! { <div class="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/20 text-green-400 rounded-full text-label-sm font-semibold border border-green-500/30">
+                                view! { <div data-testid="overlay-status-active" class="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/20 text-green-400 rounded-full text-label-sm font-semibold border border-green-500/30">
                                     <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                                     "Overlay Active"
                                 </div> }.into_any()
                             } else {
-                                view! { <div class="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/20 text-red-400 rounded-full text-label-sm font-semibold border border-red-500/30">
+                                view! { <div data-testid="overlay-status-inactive" class="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/20 text-red-400 rounded-full text-label-sm font-semibold border border-red-500/30">
                                     <div class="w-2 h-2 rounded-full bg-red-500"></div>
                                     "Overlay Inactive"
                                 </div> }.into_any()
@@ -208,6 +209,7 @@ pub fn DashboardHome() -> impl IntoView {
                 <div class="flex items-center gap-2">
                     <ActionForm action=test_action>
                         <button type="submit" 
+                            data-testid="test-overlay-btn"
                             class=move || format!("inline-flex items-center gap-xs px-md py-sm rounded-xl bg-surface-container-highest text-on-surface font-bold hover:bg-surface-container-highest/80 transition-all border border-white/10 {}", if test_action.pending().get() { "opacity-50" } else { "" })
                             disabled=move || test_action.pending().get()
                         >
@@ -217,6 +219,7 @@ pub fn DashboardHome() -> impl IntoView {
                     </ActionForm>
 
                     <button
+                        data-testid="copy-overlay-link-btn"
                         on:click=copy_to_clipboard
                         class="inline-flex items-center gap-xs px-md py-sm rounded-xl bg-primary-container text-on-primary-container font-bold hover:brightness-110 transition-all active:scale-[0.98]"
                     >

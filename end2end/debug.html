@@ -1,0 +1,532 @@
+<!DOCTYPE html><html lang="en" class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><!--hot-reload|-Users-huyvu8051-.cargo-registry-src-index.crates.io-1949cf8c6b5b557f-leptos-0.8.19-src-hydration-mod.rs-40|open--><script nonce="7FPW73Ha-4kS5eS4vGOZmQ">(function (reload_port, protocol) { console.log("[HOT RELOADING] Connected to server.");
+function patch(json) {
+  try {
+    const views = JSON.parse(json);
+    for (const [id, patches] of views) {
+      console.log("[HOT RELOAD]", id, patches);
+      const walker = document.createTreeWalker(
+          document.body,
+          NodeFilter.SHOW_COMMENT,
+        ),
+        open = `hot-reload|${id}|open`,
+        close = `hot-reload|${id}|close`;
+      let start, end;
+      const instances = [];
+      while (walker.nextNode()) {
+        if (walker.currentNode.textContent == open) {
+          start = walker.currentNode;
+        } else if (walker.currentNode.textContent == close) {
+          end = walker.currentNode;
+          instances.push([start, end]);
+          start = undefined;
+          end = undefined;
+        }
+      }
+
+      for (const [start, end] of instances) {
+        for (const patch of patches) {
+          const actualChildren = childrenFromRange(
+            start.parentElement,
+            start,
+            end,
+          );
+          const child = childAtPath(
+            actualChildren.length > 1
+              ? { children: actualChildren }
+              : actualChildren[0],
+            patch.path,
+          );
+          const action = patch.action;
+          if (action == "ClearChildren") {
+            console.log("[HOT RELOAD] > ClearChildren", child.node);
+            if (child.node) {
+              child.node.textContent = "";
+            } else {
+              for (const existingChild of child.children) {
+                let parent = existingChild.node.parentElement;
+                parent.removeChild(existingChild.node);
+              }
+            }
+          } else if (action.ReplaceWith) {
+            console.log(
+              "[HOT RELOAD] > ReplaceWith",
+              child,
+              action.ReplaceWith,
+            );
+            const replacement = fromReplacementNode(
+              action.ReplaceWith,
+              actualChildren,
+            );
+            if (child.node) {
+              child.node.replaceWith(replacement);
+            } else {
+              if (child.children) {
+                child.children[0].node.parentElement.insertBefore(
+                  replacement,
+                  child.children[0].node,
+                );
+                for (const existingChild of child.children) {
+                  existingChild.node.parentElement.removeChild(
+                    existingChild.node,
+                  );
+                }
+              }
+            }
+          } else if (action.ChangeTagName) {
+            const oldNode = child.node;
+            console.log(
+              "[HOT RELOAD] > ChangeTagName",
+              child.node,
+              action.ChangeTagName,
+            );
+            const newElement = document.createElement(action.ChangeTagName);
+            for (const attr of oldNode.attributes) {
+              newElement.setAttribute(attr.name, attr.value);
+            }
+            for (const childNode of child.node.childNodes) {
+              newElement.appendChild(childNode);
+            }
+
+            child.node.replaceWith(newElement);
+          } else if (action.RemoveAttribute) {
+            console.log(
+              "[HOT RELOAD] > RemoveAttribute",
+              child.node,
+              action.RemoveAttribute,
+            );
+            child.node.removeAttribute(action.RemoveAttribute);
+          } else if (action.SetAttribute) {
+            const [name, value] = action.SetAttribute;
+            console.log(
+              "[HOT RELOAD] > SetAttribute",
+              child.node,
+              action.SetAttribute,
+            );
+            child.node.setAttribute(name, value);
+          } else if (action.SetText) {
+            const node = child.node;
+            console.log("[HOT RELOAD] > SetText", child.node, action.SetText);
+            node.textContent = action.SetText;
+          } else if (action.AppendChildren) {
+            console.log(
+              "[HOT RELOAD] > AppendChildren",
+              child.node,
+              action.AppendChildren,
+            );
+            const newChildren = action.AppendChildren.map((x) =>
+              fromReplacementNode(x, actualChildren),
+            );
+            child.node.append(...newChildren);
+          } else if (action.RemoveChild) {
+            console.log(
+              "[HOT RELOAD] > RemoveChild",
+              child.node,
+              child.children,
+              action.RemoveChild,
+            );
+            const toRemove = child.children[action.RemoveChild.at];
+            let toRemoveNode = toRemove.node;
+            if (!toRemoveNode) {
+              const range = new Range();
+              range.setStartBefore(toRemove.start);
+              range.setEndAfter(toRemove.end);
+              toRemoveNode = range.deleteContents();
+            } else {
+              toRemoveNode.parentNode.removeChild(toRemoveNode);
+            }
+          } else if (action.InsertChild) {
+            const newChild = fromReplacementNode(
+              action.InsertChild.child,
+              actualChildren,
+            );
+            let children = [];
+            if (child.children) {
+              children = child.children;
+            } else if (child.start && child.end) {
+              children = childrenFromRange(
+                child.node || child.start.parentElement,
+                start,
+                end,
+              );
+            } else {
+              console.warn("InsertChildAfter could not build children.");
+            }
+            const beforeNode = children[action.InsertChild.before];
+            console.log(
+              "[HOT RELOAD] > InsertChild",
+              child,
+              child.node,
+              action.InsertChild,
+              " before ",
+              beforeNode,
+            );
+            if (beforeNode) {
+              let node = beforeNode.node || beforeNode.start.previousSibling;
+              node.parentElement.insertBefore(newChild, node);
+            } else if (child.node) {
+              child.node.appendChild(newChild);
+            } else if (children) {
+              let lastNode = children[children.length - 1];
+              let afterNode = lastNode.node || lastNode.end.nextSibling;
+              afterNode.after(newChild);
+            }
+          } else if (action.InsertChildAfter) {
+            const newChild = fromReplacementNode(
+              action.InsertChildAfter.child,
+              actualChildren,
+            );
+            let children = [];
+            if (child.children) {
+              children = child.children;
+            } else if (child.start && child.end) {
+              children = childrenFromRange(
+                child.node || child.start.parentElement,
+                start,
+                end,
+              );
+            } else {
+              console.warn("InsertChildAfter could not build children.");
+            }
+            const after = children[action.InsertChildAfter.after];
+            console.log(
+              "[HOT RELOAD] > InsertChildAfter",
+              child,
+              child.node,
+              action.InsertChildAfter,
+              " after ",
+              after,
+            );
+            if (
+              child.node &&
+              (!after || !(after.node || after.start).nextSibling)
+            ) {
+              child.node.appendChild(newChild);
+            } else {
+              const node = child.node || child.end;
+              const parent =
+                node.nodeType === Node.COMMENT_NODE ? node.parentNode : node;
+              if (!after) {
+                parent.appendChild(newChild);
+              } else {
+                parent.insertBefore(
+                  newChild,
+                  (after.node || after.start).nextSibling,
+                );
+              }
+            }
+          } else {
+            console.warn("[HOT RELOADING] Unmatched action", action);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("[HOT RELOADING] Error: ", e);
+  }
+
+  function fromReplacementNode(node, actualChildren) {
+    if (node.Html) {
+      return fromHTML(node.Html);
+    } else if (node.Fragment) {
+      const frag = document.createDocumentFragment();
+      for (const child of node.Fragment) {
+        frag.appendChild(fromReplacementNode(child, actualChildren));
+      }
+      return frag;
+    } else if (node.Element) {
+      const element = document.createElement(node.Element.name);
+      for (const [name, value] of node.Element.attrs) {
+        element.setAttribute(name, value);
+      }
+      for (const child of node.Element.children) {
+        element.appendChild(fromReplacementNode(child, actualChildren));
+      }
+      return element;
+    } else {
+      const child = childAtPath(
+        actualChildren.length > 1
+          ? { children: actualChildren }
+          : actualChildren[0],
+        node.Path,
+      );
+      if (child) {
+        let childNode = child.node;
+        if (!childNode) {
+          const range = new Range();
+          range.setStartBefore(child.start);
+          range.setEndAfter(child.end);
+          // okay this is somewhat silly
+          // if we do cloneContents() here to return it,
+          // we strip away the event listeners
+          // if we're moving just one object, this is less than ideal
+          // so I'm actually going to *extract* them, then clone and reinsert
+          /* const toReinsert = range.cloneContents();
+					if (child.end.nextSibling) {
+						child.end.parentNode.insertBefore(toReinsert, child.end.nextSibling);
+					} else {
+						child.end.parentNode.appendChild(toReinsert);
+					} */
+          childNode = range.cloneContents();
+        }
+        return childNode;
+      } else {
+        console.warn(
+          "[HOT RELOADING] Could not find replacement node at ",
+          node.Path,
+        );
+        return undefined;
+      }
+    }
+  }
+
+  function buildActualChildren(element, range) {
+    const walker = document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT,
+      {
+        acceptNode(node) {
+          if (
+            node.parentNode == element &&
+            (!range || range.isPointInRange(node, 0))
+          ) {
+            return NodeFilter.FILTER_ACCEPT;
+          } else {
+            return NodeFilter.FILTER_REJECT;
+          }
+        },
+      },
+    );
+    const actualChildren = [],
+      elementCount = {};
+    while (walker.nextNode()) {
+      if (walker.currentNode.nodeType == Node.ELEMENT_NODE) {
+        if (elementCount[walker.currentNode.nodeName]) {
+          elementCount[walker.currentNode.nodeName] += 1;
+        } else {
+          elementCount[walker.currentNode.nodeName] = 0;
+        }
+        elementCount[walker.currentNode.nodeName];
+
+        actualChildren.push({
+          type: "element",
+          name: walker.currentNode.nodeName,
+          number: elementCount[walker.currentNode.nodeName],
+          node: walker.currentNode,
+          children: buildActualChildren(walker.currentNode),
+        });
+      } else if (walker.currentNode.nodeType == Node.TEXT_NODE) {
+        actualChildren.push({
+          type: "text",
+          node: walker.currentNode,
+        });
+      } else if (walker.currentNode.nodeType == Node.COMMENT_NODE) {
+        if (walker.currentNode.textContent.trim().startsWith("hot-reload|")) {
+          if (walker.currentNode.textContent.trim().endsWith("|open")) {
+            const startingName = walker.currentNode.textContent.trim();
+            const componentName = startingName
+              .replace("|open", "")
+              .replace("hot-reload|", "");
+            const endingName = `hot-reload|${componentName}|close`;
+            let start = walker.currentNode;
+            let depth = 1;
+
+            while (walker.nextNode()) {
+              if (walker.currentNode.textContent.trim() == endingName) {
+                depth--;
+              } else if (
+                walker.currentNode.textContent.trim() == startingName
+              ) {
+                depth++;
+              }
+
+              if (depth == 0) {
+                break;
+              }
+            }
+            let end = walker.currentNode;
+            actualChildren.push({
+              type: "fragment",
+              start: start.nextSibling,
+              end: end.previousSibling,
+              children: childrenFromRange(
+                start.parentElement,
+                start.nextSibling,
+                end.previousSibling,
+              ),
+            });
+          }
+        } else if (walker.currentNode.textContent.trim() == "<() />") {
+          actualChildren.push({
+            type: "unit",
+            node: walker.currentNode,
+          });
+        } else if (walker.currentNode.textContent.trim() == "<DynChild>") {
+          let start = walker.currentNode;
+          let depth = 1;
+
+          while (walker.nextNode()) {
+            if (walker.currentNode.textContent.trim() == "</DynChild>") {
+              depth--;
+            } else if (walker.currentNode.textContent.trim() == "<DynChild>") {
+              depth++;
+            }
+
+            if (depth == 0) {
+              break;
+            }
+          }
+          let end = walker.currentNode;
+          actualChildren.push({
+            type: "dyn-child",
+            start,
+            end,
+          });
+        } else if (walker.currentNode.textContent.trim() == "<>") {
+          let start = walker.currentNode;
+          let depth = 1;
+
+          while (walker.nextNode()) {
+            if (walker.currentNode.textContent.trim() == "</>") {
+              depth--;
+            } else if (walker.currentNode.textContent.trim() == "<>") {
+              depth++;
+            }
+
+            if (depth == 0) {
+              break;
+            }
+          }
+          let end = walker.currentNode;
+          actualChildren.push({
+            type: "fragment",
+            children: childrenFromRange(start.parentElement, start, end),
+            start,
+            end,
+          });
+        } else if (walker.currentNode.textContent.trim().startsWith("<")) {
+          let componentName = walker.currentNode.textContent.trim();
+          let endMarker = componentName.replace("<", "</");
+          let depth = 1;
+          let start = walker.currentNode;
+          while (walker.nextNode()) {
+            if (walker.currentNode.textContent.trim() == endMarker) {
+              depth--;
+            } else if (walker.currentNode.textContent.trim() == componentName) {
+              depth++;
+            }
+
+            if (depth == 0) {
+              break;
+            }
+          }
+          let end = walker.currentNode;
+          actualChildren.push({
+            type: "component",
+            start,
+            end,
+          });
+        }
+      } else {
+        console.warn(
+          "[HOT RELOADING] Building children, encountered",
+          walker.currentNode,
+        );
+      }
+    }
+    return actualChildren;
+  }
+
+  function childAtPath(element, path) {
+    if (path.length == 0) {
+      return element;
+    } else if (element.children) {
+      const next = element.children[path[0]],
+        rest = path.slice(1);
+      return childAtPath(next, rest);
+    } else if (path == [0]) {
+      return element;
+    } else if (element.start && element.end) {
+      const actualChildren = childrenFromRange(
+        element.node || element.start.parentElement,
+        element.start,
+        element.end,
+      );
+      return childAtPath({ children: actualChildren }, path);
+    } else {
+      console.warn("[HOT RELOADING] Child at ", path, "not found in ", element);
+      return element;
+    }
+  }
+
+  function childrenFromRange(parent, start, end) {
+    const range = new Range();
+    range.setStartAfter(start);
+    range.setEndBefore(end);
+    return buildActualChildren(parent, range);
+  }
+
+  function fromHTML(html) {
+    const template = document.createElement("template");
+    template.innerHTML = html;
+    return template.content.cloneNode(true);
+  }
+}
+ if (window.location.protocol === "https:") {
+	protocol = "wss://";
+}
+
+let host = window.location.hostname;
+
+function connect() {
+	let ws = new WebSocket(`${protocol}${host}:${reload_port}/live_reload`);
+
+	ws.onmessage = (ev) => {
+		let msg = JSON.parse(ev.data);
+		if (msg.all) window.location.reload();
+		if (msg.css) {
+			let found = false;
+			document.querySelectorAll("link").forEach((link) => {
+				if (link.getAttribute("href").includes(msg.css)) {
+					let newHref = "/" + msg.css + "?version=" + Date.now();
+					link.setAttribute("href", newHref);
+					found = true;
+				}
+			});
+			if (!found)
+				console.warn(
+					`CSS hot-reload: Could not find a <link href=/\"${msg.css}\"> element`,
+				);
+		}
+		if (msg.view) {
+			patch(msg.view);
+		}
+	};
+
+	ws.onclose = () => {
+		console.warn("Live-reload disconnected. Reconnecting...");
+		setTimeout(connect, 1000);
+	};
+
+	ws.onerror = () => {
+		ws.close();
+	};
+}
+
+connect();
+ })(3001, 'ws://')</script><!--hot-reload|-Users-huyvu8051-.cargo-registry-src-index.crates.io-1949cf8c6b5b557f-leptos-0.8.19-src-hydration-mod.rs-40|close--><!--hot-reload|-Users-huyvu8051-.cargo-registry-src-index.crates.io-1949cf8c6b5b557f-leptos-0.8.19-src-hydration-mod.rs-178|open--><link rel="modulepreload" href="/pkg/open-donate.js" crossorigin="7FPW73Ha-4kS5eS4vGOZmQ"><link rel="preload" href="/pkg/open-donate.wasm" as="fetch" type="application/wasm" crossorigin="7FPW73Ha-4kS5eS4vGOZmQ"><script type="module" nonce="7FPW73Ha-4kS5eS4vGOZmQ">(function (root, pkg_path, output_name, wasm_output_name) {
+	import(`${root}/${pkg_path}/${output_name}.js`)
+		.then(mod => {
+			mod.default({module_or_path: `${root}/${pkg_path}/${wasm_output_name}.wasm`}).then(() => {
+				mod.hydrate();
+			});
+		})
+})
+("", "pkg", "open-donate", "open-donate");</script><!----><!--hot-reload|-Users-huyvu8051-.cargo-registry-src-index.crates.io-1949cf8c6b5b557f-leptos-0.8.19-src-hydration-mod.rs-178|close--><!--HEAD--><link id="leptos" rel="stylesheet" href="/pkg/open-donate.css"><title>Glint | Empower Your Content</title><!----><!----></head><body class="bg-background text-on-background selection:bg-primary selection:text-on-primary text-left min-h-screen flex flex-col"><!--hot-reload|src-app.rs-82|open--><!--hot-reload|src-app.rs-66|open--><!--<() />--><!--<() />--><!--hot-reload|src-dashboard.rs-14|open--><!--hot-reload|src-dashboard.rs-15|open--><div class="bg-background text-on-surface font-body-md antialiased overflow-x-hidden"><header class="fixed top-0 w-full z-50 bg-surface/60 backdrop-blur-xl border-b border-white/20 shadow-sm flex flex-col px-margin-mobile md:px-margin-desktop"><div class="h-20 flex justify-between items-center w-full"><div class="flex items-center gap-md"><a href="/" class="text-headline-md font-headline-md font-extrabold text-primary tracking-tighter">Glint</a><nav class="hidden md:flex items-center gap-md ml-lg"><a class="text-on-surface-variant font-medium text-label-md font-label-md hover:text-primary transition-colors" href="/">Explore<!----></a><a class="text-on-surface-variant font-medium text-label-md font-label-md hover:text-primary transition-colors" href="/explore">Creators<!----></a><a class="text-on-surface-variant font-medium text-label-md font-label-md hover:text-primary transition-colors" href="/leaderboard">Leaderboard<!----></a><!----><!----></nav><!----><!----></div><div class="flex items-center gap-md"><div class="flex items-center gap-sm"><a class="hidden sm:inline text-on-surface text-label-md font-semibold hover:text-primary transition-colors" href="/dashboard">Hello, Leda64<!----><!----></a><form action="/api/logout13058400455092437024" method="post"><button class="px-sm py-xs bg-surface-container-highest border border-white/10 text-on-surface rounded-lg text-label-sm font-label-sm transition-all flex items-center gap-xs hover:bg-surface-container-highest/80" data-testid="logout-button" type="submit"><!----><!---->Logout<!----><!----></button><!----></form><div class="flex items-center gap-1 bg-surface-container border border-white/10 rounded-lg p-1 shadow-inner"><button class="px-2 py-0.5 rounded text-[10px] font-bold transition-all bg-primary text-on-primary shadow-sm">EN<!----></button><button class="px-2 py-0.5 rounded text-[10px] font-bold transition-all text-on-surface-variant hover:text-on-surface">VI<!----></button><!----><!----></div><!----><!----></div><button class="md:hidden text-on-surface flex items-center justify-center"><span class="material-symbols-outlined">menu<!----></span><!----></button><!----><!----></div><!----><!----></div><!----><!----><!----><!----></header><aside class="fixed left-0 top-20 h-[calc(100vh-80px)] w-64 bg-surface-container-low/40 backdrop-blur-md border-r border-white/10 hidden md:flex flex-col p-md gap-base z-40"><div class="mb-lg"><h2 class="text-headline-sm font-headline-sm text-primary">Creator Hub<!----></h2><p class="text-label-sm font-label-sm text-on-surface-variant">Manage your Glint account<!----></p><!----><!----></div><nav class="flex-1 flex flex-col gap-xs"><a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="/dashboard"><span class="material-symbols-outlined">dashboard</span><span class="text-label-md font-label-md">Dashboard<!----></span><!----><!----></a><a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="/dashboard/analytics"><span class="material-symbols-outlined">monitoring</span><span class="text-label-md font-label-md">Analytics<!----></span><!----><!----></a><a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="/dashboard/payments"><span class="material-symbols-outlined">payments</span><span class="text-label-md font-label-md">Payments<!----></span><!----><!----></a><a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/50 rounded-xl transition-all" href="/dashboard/settings"><span class="material-symbols-outlined">settings</span><span class="text-label-md font-label-md">Settings<!----></span><!----><!----></a><!----><!----></nav><button class="bg-gradient-to-r from-primary-container to-primary text-on-primary-container py-sm rounded-xl font-bold flex items-center justify-center gap-xs active:scale-95 transition-all shadow-lg shadow-primary/20"><span class="material-symbols-outlined">videocam</span><span>Go Live<!----></span><!----><!----></button><div class="pt-md border-t border-white/10 flex flex-col gap-xs"><a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/30 rounded-xl transition-all" href="#"><span class="material-symbols-outlined">help</span><span class="text-label-md font-label-md">Help<!----></span><!----><!----></a><a class="flex items-center gap-sm p-sm text-on-surface-variant hover:bg-surface-variant/30 rounded-xl transition-all" href="/api/auth/logout"><span class="material-symbols-outlined">logout</span><span class="text-label-md font-label-md">Logout<!----></span><!----><!----></a><!----><!----></div><!----><!----></aside><main class="md:ml-64 pt-32 px-margin-mobile md:px-margin-desktop pb-24 md:pb-xl min-h-screen"><div class="max-w-7xl mx-auto"><div class="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg"><div><h1 class="text-headline-lg font-headline-lg text-on-surface" data-testid="streamer-dashboard-header">Streamer Dashboard<!----></h1><p class="text-body-md font-body-md text-on-surface-variant">Welcome back,Leda64. Your creator hub is ready.<!----><!----></p><!----><!----></div><a class="inline-flex items-center gap-xs px-md py-sm rounded-xl bg-primary-container text-on-primary-container font-bold hover:brightness-110 transition-all active:scale-[0.98]" href="/overlay/Leda64" target="_blank" rel="noopener noreferrer"><span class="material-symbols-outlined text-[20px]">open_in_new</span><span>Open Overlay<!----></span><!----><!----></a><!----><!----></div><div class="glass-card p-lg rounded-xl flex flex-col gap-lg mb-lg"><div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-md"><div><h3 class="text-headline-md font-headline-md text-on-surface">Donation History<!----></h3><p class="text-body-md font-body-md text-on-surface-variant">Detailed view of your recent contributions<!----></p><!----><!----></div><div class="flex flex-wrap gap-sm w-full md:w-auto items-center"><label class="flex items-center gap-2 text-label-md text-on-surface cursor-pointer"><input class="accent-primary w-4 h-4 cursor-pointer" type="checkbox">Auto Reload<!----><!----></label><div class="flex items-center gap-2 ml-2"><select class="bg-surface-variant/30 border-none rounded-lg px-2 py-1 text-label-sm text-on-surface focus:ring-1 focus:ring-primary cursor-pointer"><option value="5" selected="">5s<!----></option><option value="10">10s<!----></option><option value="30">30s<!----></option><option value="60">60s<!----></option><!----><!----></select><!----></div><div class="flex items-center gap-2 ml-4"><span class="text-label-sm text-on-surface-variant">Per page:<!----></span><select class="bg-surface-variant/30 border-none rounded-lg px-2 py-1 text-label-sm text-on-surface focus:ring-1 focus:ring-primary cursor-pointer"><option value="5">5<!----></option><option value="10" selected="">10<!----></option><option value="20">20<!----></option><option value="50">50<!----></option><!----><!----></select><!----><!----></div><!----><!----></div><!----><!----></div><div class="overflow-x-auto custom-scrollbar"><table class="w-full text-left border-collapse min-w-[700px]"><thead><tr class="border-b border-white/10 text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider"><th class="pb-md pr-md">Donor<!----></th><th class="pb-md px-md">Amount<!----></th><th class="pb-md px-md">Message<!----></th><th class="pb-md pl-md">Time<!----></th><!----><!----></tr><!----></thead><tbody class="text-body-md"><tr><td class="py-md text-center text-on-surface-variant" colspan="4">No donations yet.<!----></td><!----></tr><!----></tbody><!----><!----></table><!----></div><div class="flex justify-between items-center pt-md border-t border-white/10"><p class="text-label-sm font-label-sm text-on-surface-variant">Showing 0 to 0 of 0 donations<!----><!----></p><div class="flex gap-xs"><button class="w-10 h-10 flex items-center justify-center rounded-lg bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/50 disabled:opacity-30" disabled=""><span class="material-symbols-outlined">chevron_left</span><!----></button><span class="w-10 h-10 flex items-center justify-center rounded-lg bg-primary text-on-primary font-bold text-label-md">1<!----></span><button class="w-10 h-10 flex items-center justify-center rounded-lg bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/50 disabled:opacity-30" disabled=""><span class="material-symbols-outlined">chevron_right</span><!----></button><!----><!----></div><!----><!----></div><!----><!----></div><!----><!----></div><!----></main><nav class="fixed bottom-0 w-full bg-surface-container-low/90 backdrop-blur-xl border-t border-white/10 flex justify-around items-center h-16 z-50 md:hidden pb-safe"><a class="flex flex-col items-center gap-1 text-primary w-16" href="/dashboard"><span class="material-symbols-outlined text-[24px]">dashboard</span><span class="text-[10px] font-bold leading-none">Dashboard<!----></span><!----><!----></a><a class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16" href="/dashboard/analytics"><span class="material-symbols-outlined text-[24px]">monitoring</span><span class="text-[10px] font-medium leading-none">Analytics<!----></span><!----><!----></a><button class="relative -top-5 w-12 h-12 bg-gradient-to-tr from-primary to-primary-container rounded-full shadow-lg shadow-primary/30 flex items-center justify-center text-on-primary active:scale-95 transition-transform border-4 border-background"><span class="material-symbols-outlined text-[24px]">videocam</span></button><a class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16" href="/dashboard/payments"><span class="material-symbols-outlined text-[24px]">payments</span><span class="text-[10px] font-medium leading-none">Payments<!----></span><!----><!----></a><a class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-primary transition-colors w-16" href="/dashboard/settings"><span class="material-symbols-outlined text-[24px]">settings</span><span class="text-[10px] font-medium leading-none">Settings<!----></span><!----><!----></a><!----><!----></nav><footer class="bg-surface-dim border-t border-surface-container-highest w-full py-lg mt-auto"><div class="max-w-7xl mx-auto px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-md"><div class="flex flex-col items-center md:items-start gap-xs"><a href="/" class="text-headline-md font-headline-md font-bold text-primary hover:text-primary/80 transition-colors">Glint</a><p class="text-on-surface-variant text-body-md font-body-md">© 2024 Glint Technologies. Optimism in every transaction.<!----></p><!----><!----></div><nav class="flex flex-wrap justify-center gap-md"><a class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors" href="/about">About<!----></a><a class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors" href="/faq">FAQ<!----></a><a class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors" href="/privacy">Privacy Policy<!----></a><a class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors" href="/terms">Terms of Service<!----></a><a class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors" href="#">Discord<!----></a><!----><!----></nav><!----><!----></div><!----></footer><div class="fixed top-0 left-0 w-full h-full -z-10 pointer-events-none"><div class="js-glow absolute top-[10%] left-[20%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] animate-pulse"></div><div class="js-glow absolute bottom-[20%] right-[10%] w-[400px] h-[400px] bg-secondary/5 rounded-full blur-[100px]"></div></div><script>document.querySelectorAll('.glass-card').forEach(card => {
+                                            card.addEventListener('mouseenter', () => {
+                                                card.style.transform = 'translateY(-2px)';
+                                                card.style.transition = 'transform 0.2s ease-out';
+                                            });
+                                            card.addEventListener('mouseleave', () => {
+                                                card.style.transform = 'translateY(0px)';
+                                            });
+                                        });</script><!----><!----></div><!--hot-reload|src-dashboard.rs-15|close--><!--hot-reload|src-dashboard.rs-14|close--><!----><!--hot-reload|src-app.rs-66|close--><!--hot-reload|src-app.rs-82|close--><!----><script nonce="7FPW73Ha-4kS5eS4vGOZmQ">__RESOLVED_RESOURCES=[];__SERIALIZED_ERRORS=[];__PENDING_RESOURCES=[0,];__RESOURCE_RESOLVERS=[];</script><script nonce="7FPW73Ha-4kS5eS4vGOZmQ">__RESOLVED_RESOURCES[0] = "{\"Ok\":{\"id\":\"b32a7ed4-4a75-4c78-bf35-1dde190cf973\",\"name\":\"Leda64\",\"email\":\"Leda64@gmail.com\"}}";</script><script nonce="7FPW73Ha-4kS5eS4vGOZmQ">__INCOMPLETE_CHUNKS=[1,];</script></body><!----><!----></html>

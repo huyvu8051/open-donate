@@ -121,20 +121,20 @@ pub fn OverlayPage() -> impl IntoView {
                             <div class="max-w-4xl w-full bg-black/60 backdrop-blur-md border border-white/10 rounded-3xl px-10 py-8 shadow-[0_0_80px_rgba(0,0,0,0.55)] animate-fade-in">
                                 <div class="flex items-center justify-between gap-6">
                                     <div class="flex flex-col gap-1">
-                                        <div class="text-white text-4xl font-bold leading-tight">
+                                        <div data-testid="mock-donor-name" class="text-white text-4xl font-bold leading-tight">
                                             {tx.donor_name}
                                         </div>
                                         <div class="text-white/80 text-lg">
                                             "sent a Glint"
                                         </div>
                                     </div>
-                                    <div class="text-secondary text-5xl font-extrabold">
+                                    <div data-testid="mock-amount" class="text-secondary text-5xl font-extrabold">
                                         "$" {format!("{:.2}", tx.amount)}
                                     </div>
                                 </div>
                                 {move || {
                                     msg.clone().map(|m| view! {
-                                        <div class="mt-6 text-white/90 text-2xl italic break-words">
+                                        <div data-testid="mock-message" class="mt-6 text-white/90 text-2xl italic break-words">
                                             "\"" {m} "\""
                                         </div>
                                     })

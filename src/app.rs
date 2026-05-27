@@ -1859,8 +1859,7 @@ pub async fn poll_overlay_transactions(token: String, session_id: String) -> Res
 
 #[server(GetOverlayStatus, "/api")]
 pub async fn get_overlay_status() -> Result<bool, ServerFnError> {
-    use crate::auth::get_user_from_session;
-    let user = match get_user_from_session().await {
+    let user = match get_me().await {
         Ok(Some(u)) => u,
         _ => return Err(ServerFnError::new("Unauthorized")),
     };
@@ -1891,8 +1890,7 @@ pub async fn get_overlay_status() -> Result<bool, ServerFnError> {
 
 #[server(TestOverlayDonation, "/api")]
 pub async fn test_overlay_donation() -> Result<(), ServerFnError> {
-    use crate::auth::get_user_from_session;
-    let user = match get_user_from_session().await {
+    let user = match get_me().await {
         Ok(Some(u)) => u,
         _ => return Err(ServerFnError::new("Unauthorized")),
     };
