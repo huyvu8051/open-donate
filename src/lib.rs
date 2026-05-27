@@ -10,6 +10,7 @@ pub mod pages;
 pub mod s3;
 
 pub mod avatar;
+pub mod analytics;
 #[cfg(feature = "ssr")]
 pub mod sitemap;
 

@@ -35,8 +35,13 @@ pub struct LeaderboardEntry {
 pub struct StreamerAnalytics {
     pub total_revenue: f64,
     pub donation_count: i64,
+    pub avg_donation: f64,
+    pub top_single_donation: f64,
     pub top_donors: Vec<(String, f64)>,
     pub revenue_over_time: Vec<(String, f64)>,
+    pub payment_method_breakdown: Vec<(String, i64)>,
+    pub amount_distribution: Vec<(String, i64)>,
+    pub cumulative_revenue: Vec<(String, f64)>,
 }
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
@@ -1328,85 +1333,132 @@ pub async fn get_streamer_analytics(streamer_id: i32, time_range: String) -> Res
     let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
+    use sqlx::Row;
+
+    // === Basic stats ===
     let stats = sqlx::query(
-        "SELECT COALESCE(SUM(amount), 0) as total_revenue, COUNT(*) as donation_count 
+        "SELECT COALESCE(SUM(amount), 0) as total_revenue, COUNT(*) as donation_count,
+                COALESCE(AVG(amount), 0) as avg_donation,
+                COALESCE(MAX(amount), 0) as top_single_donation
          FROM transactions 
          WHERE streamer_id = $1"
     )
     .bind(streamer_id)
     .fetch_one(&pool)
     .await;
-    
-    use sqlx::Row;
-    let (total_revenue, donation_count) = match stats {
-        Ok(r) => (r.try_get::<f64, _>("total_revenue").unwrap_or(0.0), r.try_get::<i64, _>("donation_count").unwrap_or(0)),
-        Err(_) => (0.0, 0),
+
+    let (total_revenue, donation_count, avg_donation, top_single_donation) = match stats {
+        Ok(r) => (
+            r.try_get::<f64, _>("total_revenue").unwrap_or(0.0),
+            r.try_get::<i64, _>("donation_count").unwrap_or(0),
+            r.try_get::<f64, _>("avg_donation").unwrap_or(0.0),
+            r.try_get::<f64, _>("top_single_donation").unwrap_or(0.0),
+        ),
+        Err(_) => (0.0, 0, 0.0, 0.0),
     };
 
-    let top_donors = sqlx::query(
+    // === Top donors ===
+    let top_donors_rows = sqlx::query(
         "SELECT donor_name, SUM(amount) as total_donated 
          FROM transactions 
          WHERE streamer_id = $1
          GROUP BY donor_name 
          ORDER BY total_donated DESC 
-         LIMIT 5"
+         LIMIT 10"
     )
     .bind(streamer_id)
     .fetch_all(&pool)
     .await
     .unwrap_or_default();
 
-    let donors = top_donors.into_iter().map(|r| {
+    let top_donors = top_donors_rows.into_iter().map(|r| {
         (r.get::<String, _>("donor_name"), r.get::<f64, _>("total_donated"))
     }).collect();
 
-    let revenue_time = if time_range == "day" {
-        sqlx::query(
-            "SELECT TO_CHAR(created_at, 'HH24:00') as date, SUM(amount) as daily_revenue
+    // === Revenue over time ===
+    let interval = match time_range.as_str() { "day" => "24 hours", "month" => "30 days", _ => "7 days" };
+    let date_format = match time_range.as_str() { "day" => "HH24:00", _ => "MM-DD" };
+    let revenue_time_rows = sqlx::query(
+        &format!(
+            "SELECT TO_CHAR(created_at, '{}') as date, SUM(amount) as daily_revenue
              FROM transactions 
-             WHERE streamer_id = $1 AND created_at >= NOW() - INTERVAL '24 hours'
-             GROUP BY TO_CHAR(created_at, 'HH24:00')
-             ORDER BY date ASC"
+             WHERE streamer_id = $1 AND created_at >= NOW() - INTERVAL '{}'
+             GROUP BY TO_CHAR(created_at, '{}')
+             ORDER BY date ASC",
+            date_format, interval, date_format
         )
-        .bind(streamer_id)
-        .fetch_all(&pool)
-        .await
-        .unwrap_or_default()
-    } else if time_range == "month" {
-        sqlx::query(
-            "SELECT TO_CHAR(created_at, 'MM-DD') as date, SUM(amount) as daily_revenue
-             FROM transactions 
-             WHERE streamer_id = $1 AND created_at >= NOW() - INTERVAL '30 days'
-             GROUP BY TO_CHAR(created_at, 'MM-DD')
-             ORDER BY date ASC"
-        )
-        .bind(streamer_id)
-        .fetch_all(&pool)
-        .await
-        .unwrap_or_default()
-    } else { // "week"
-        sqlx::query(
-            "SELECT TO_CHAR(created_at, 'MM-DD') as date, SUM(amount) as daily_revenue
-             FROM transactions 
-             WHERE streamer_id = $1 AND created_at >= NOW() - INTERVAL '7 days'
-             GROUP BY TO_CHAR(created_at, 'MM-DD')
-             ORDER BY date ASC"
-        )
-        .bind(streamer_id)
-        .fetch_all(&pool)
-        .await
-        .unwrap_or_default()
+    )
+    .bind(streamer_id)
+    .fetch_all(&pool)
+    .await
+    .unwrap_or_default();
+
+    let revenue_over_time: Vec<(String, f64)> = revenue_time_rows.into_iter().map(|r| {
+        (r.get::<String, _>("date"), r.get::<f64, _>("daily_revenue"))
+    }).collect();
+
+    // === Cumulative revenue ===
+    let cumulative_revenue: Vec<(String, f64)> = {
+        let mut running = 0.0_f64;
+        revenue_over_time.iter().map(|(date, rev)| {
+            running += rev;
+            (date.clone(), running)
+        }).collect()
     };
 
-    let revenue_over_time: Vec<(String, f64)> = revenue_time.into_iter().map(|r| {
-        (r.get::<String, _>("date"), r.get::<f64, _>("daily_revenue"))
+    // === Payment method breakdown ===
+    let payment_rows = sqlx::query(
+        "SELECT payment_method::text as method, COUNT(*) as cnt
+         FROM transactions
+         WHERE streamer_id = $1
+         GROUP BY payment_method
+         ORDER BY cnt DESC"
+    )
+    .bind(streamer_id)
+    .fetch_all(&pool)
+    .await
+    .unwrap_or_default();
+
+    let payment_method_breakdown: Vec<(String, i64)> = payment_rows.into_iter().map(|r| {
+        (r.get::<String, _>("method"), r.get::<i64, _>("cnt"))
+    }).collect();
+
+    // === Amount distribution (buckets) ===
+    let bucket_rows = sqlx::query(
+        "SELECT
+            CASE
+                WHEN amount < 1    THEN '< $1'
+                WHEN amount < 5    THEN '$1 - $5'
+                WHEN amount < 10   THEN '$5 - $10'
+                WHEN amount < 50   THEN '$10 - $50'
+                WHEN amount < 100  THEN '$50 - $100'
+                ELSE '$100+'
+            END as bucket,
+            COUNT(*) as cnt
+         FROM transactions
+         WHERE streamer_id = $1
+         GROUP BY bucket
+         ORDER BY MIN(amount) ASC"
+    )
+    .bind(streamer_id)
+    .fetch_all(&pool)
+    .await
+    .unwrap_or_default();
+
+    let amount_distribution: Vec<(String, i64)> = bucket_rows.into_iter().map(|r| {
+        (r.get::<String, _>("bucket"), r.get::<i64, _>("cnt"))
     }).collect();
 
     Ok(StreamerAnalytics {
         total_revenue,
         donation_count,
-        top_donors: donors,
+        avg_donation,
+        top_single_donation,
+        top_donors,
         revenue_over_time,
+        payment_method_breakdown,
+        amount_distribution,
+        cumulative_revenue,
     })
 }
 
