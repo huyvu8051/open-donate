@@ -1,3 +1,4 @@
+use crate::db::{TransactionStatus, PaymentMethod};
 use leptos::prelude::*;
 use crate::app::{get_or_create_streamer, get_dashboard_transactions, Header, Footer, UpdateStreamerProfile};
 use leptos_router::components::{Outlet};
@@ -177,6 +178,10 @@ pub fn DashboardHome() -> impl IntoView {
     });
 
     let test_action = ServerAction::<crate::app::TestOverlayDonation>::new();
+    let pause_action = ServerAction::<crate::app::ToggleOverlayPause>::new();
+    let sound_action = ServerAction::<crate::app::ToggleOverlaySound>::new();
+    let (is_paused, set_is_paused) = signal(streamer.overlay_paused);
+    let (is_sound, set_is_sound) = signal(streamer.overlay_sound_enabled);
 
     view! {
         <div class="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
@@ -206,6 +211,27 @@ pub fn DashboardHome() -> impl IntoView {
                     </Suspense>
                 </div>
                 
+                <div class="flex flex-wrap items-center gap-2 mb-2">
+                    <ActionForm action=pause_action>
+                        <input type="hidden" name="paused" value=move || (!is_paused.get()).to_string() />
+                        <button type="submit" 
+                            on:click=move |_| set_is_paused.update(|p| *p = !*p)
+                            class=move || format!("inline-flex items-center gap-xs px-md py-sm rounded-xl font-bold transition-all border {}", if is_paused.get() { "bg-error/20 text-error border-error/30 hover:bg-error/30" } else { "bg-surface-container-highest text-on-surface hover:bg-surface-container-highest/80 border-white/10" })>
+                            <span class="material-symbols-outlined text-[18px]">{move || if is_paused.get() { "play_arrow" } else { "pause" }}</span>
+                            <span>{move || if is_paused.get() { "Resume Overlay" } else { "Pause Overlay" }}</span>
+                        </button>
+                    </ActionForm>
+
+                    <ActionForm action=sound_action>
+                        <input type="hidden" name="enabled" value=move || (!is_sound.get()).to_string() />
+                        <button type="submit" 
+                            on:click=move |_| set_is_sound.update(|s| *s = !*s)
+                            class=move || format!("inline-flex items-center gap-xs px-md py-sm rounded-xl font-bold transition-all border {}", if is_sound.get() { "bg-surface-container-highest text-on-surface hover:bg-surface-container-highest/80 border-white/10" } else { "bg-surface-variant text-on-surface-variant border-surface-variant/50 hover:bg-surface-variant/80" })>
+                            <span class="material-symbols-outlined text-[18px]">{move || if is_sound.get() { "volume_up" } else { "volume_off" }}</span>
+                            <span>{move || if is_sound.get() { "Mute Sound" } else { "Enable Sound" }}</span>
+                        </button>
+                    </ActionForm>
+                </div>
                 <div class="flex items-center gap-2">
                     <ActionForm action=test_action>
                         <button type="submit" 
@@ -226,6 +252,15 @@ pub fn DashboardHome() -> impl IntoView {
                         <span class="material-symbols-outlined text-[18px]">"content_copy"</span>
                         <span>"Copy Overlay Link"</span>
                     </button>
+
+                    <a
+                        href=format!("/streamer/{}", streamer.username)
+                        target="_blank"
+                        class="inline-flex items-center gap-xs px-md py-sm rounded-xl bg-secondary text-on-secondary-container font-bold hover:brightness-110 transition-all active:scale-[0.98]"
+                    >
+                        <span class="material-symbols-outlined text-[18px]">"open_in_new"</span>
+                        <span>"Open Donate Page"</span>
+                    </a>
                 </div>
             </div>
         </div>
@@ -259,7 +294,7 @@ pub fn SettingsPage() -> impl IntoView {
                     <span class="text-label-sm text-on-surface-variant">{leptos_fluent::move_tr!("settings-public-path")}</span>
                 </div>
                 
-                {streamer.payment_methods.clone().into_iter().map(|pm| view! { <input type="hidden" name="payment_methods[]" value=pm /> }).collect_view()}
+                {streamer.payment_methods.clone().into_iter().map(|pm| view! { <input type="hidden" name="payment_methods[]" value=pm.to_string() /> }).collect_view()}
                 
                 <Suspense fallback=|| ()>
                     {move || match action_value.get() {
@@ -312,11 +347,11 @@ pub fn PaymentsPage() -> impl IntoView {
                         <label class="text-label-md font-bold text-on-surface">{leptos_fluent::move_tr!("payments-supported-methods")}</label>
                         <div class="flex flex-col gap-sm">
                             <label class="flex items-center gap-sm cursor-pointer">
-                                <input type="checkbox" name="payment_methods[]" value="Mock Auto" checked=streamer.payment_methods.contains(&"Mock Auto".to_string()) class="w-5 h-5 accent-primary bg-surface-variant/30 border-none rounded" />
+                                <input type="checkbox" name="payment_methods[]" value="Mock Auto" checked=streamer.payment_methods.contains(&PaymentMethod::MockAuto) class="w-5 h-5 accent-primary bg-surface-variant/30 border-none rounded" />
                                 <span class="text-body-md text-on-surface">{leptos_fluent::move_tr!("payments-mock-auto")}</span>
                             </label>
                             <label class="flex items-center gap-sm cursor-pointer">
-                                <input type="checkbox" name="payment_methods[]" value="Mock Manual" checked=streamer.payment_methods.contains(&"Mock Manual".to_string()) class="w-5 h-5 accent-primary bg-surface-variant/30 border-none rounded" />
+                                <input type="checkbox" name="payment_methods[]" value="Mock Manual" checked=streamer.payment_methods.contains(&PaymentMethod::MockManual) class="w-5 h-5 accent-primary bg-surface-variant/30 border-none rounded" />
                                 <span class="text-body-md text-on-surface">{leptos_fluent::move_tr!("payments-mock-manual")}</span>
                             </label>
                         </div>
@@ -395,6 +430,8 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
             get_dashboard_transactions(streamer_id, p, ps, trig).await
         }
     });
+
+    let mark_action = ServerAction::<crate::app::MarkTransactionViewed>::new();
 
     let total_count = move || {
         tx_resource.get().and_then(|r| r.ok()).map(|(_, count)| count).unwrap_or(0)
@@ -476,6 +513,7 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
                             <th class="pb-md pr-md">{leptos_fluent::move_tr!("dashboard-col-donor")}</th>
                             <th class="pb-md px-md">{leptos_fluent::move_tr!("dashboard-col-amount")}</th>
                             <th class="pb-md px-md">{leptos_fluent::move_tr!("dashboard-col-message")}</th>
+                            <th class="pb-md px-md">Status</th>
                             <th class="pb-md pl-md">{leptos_fluent::move_tr!("dashboard-col-time")}</th>
                         </tr>
                     </thead>
@@ -494,6 +532,9 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
                                     </td>
                                     <td class="py-md px-md">
                                         <div class="h-4 w-32 bg-surface-variant/50 rounded"></div>
+                                    </td>
+                                    <td class="py-md px-md">
+                                        <div class="h-4 w-16 bg-surface-variant/50 rounded"></div>
                                     </td>
                                     <td class="py-md pl-md">
                                         <div class="h-4 w-20 bg-surface-variant/50 rounded"></div>
@@ -520,7 +561,22 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
                                                         </td>
                                                         <td class="py-md px-md font-bold text-secondary">"+$" {format!("{:.2}", tx.amount)}</td>
                                                         <td class="py-md px-md text-on-surface-variant italic">
-                                                            {if let Some(msg) = tx.message { format!("\"{}\"", msg) } else { "".to_string() }}
+                                                            {if let Some(msg) = tx.message.clone() { format!("\"{}\"", msg) } else { "".to_string() }}
+                                                        </td>
+                                                        <td class="py-md px-md">
+                                                            {if tx.status == TransactionStatus::ReadyForDisplay {
+                                                                view! {
+                                                                    <div class="flex items-center gap-2">
+                                                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary uppercase">Ready</span>
+                                                                        <ActionForm action=mark_action>
+                                                                            <input type="hidden" name="tx_id" value={tx.id} />
+                                                                            <button type="submit" class="text-xs text-on-surface-variant hover:text-on-surface underline">"Mark as Viewed"</button>
+                                                                        </ActionForm>
+                                                                    </div>
+                                                                }.into_any()
+                                                            } else {
+                                                                view! { <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-variant text-on-surface-variant uppercase">Displayed</span> }.into_any()
+                                                            }}
                                                         </td>
                                                         <td class="py-md pl-md text-outline">{tx.created_at}</td>
                                                     </tr>

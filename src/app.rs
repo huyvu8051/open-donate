@@ -1,3 +1,4 @@
+use crate::db::{TransactionStatus, PaymentMethod};
 use leptos::prelude::*;
 use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
 use leptos_router::{
@@ -12,16 +13,13 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct MockPaymentInit {
     pub tx_id: i32,
-    pub status: String,
+    pub status: TransactionStatus,
     pub display_qr: Option<String>,
     pub display_url: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct MockPaymentStatus {
-    pub tx_id: i32,
-    pub status: String,
-}
+pub struct MockPaymentStatus { pub tx_id: i32, pub status: TransactionStatus, }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct LeaderboardEntry {
@@ -630,14 +628,14 @@ pub fn StreamerPage() -> impl IntoView {
     let amount = RwSignal::new("25".to_string());
     let donor_name = RwSignal::new("".to_string());
     let message = RwSignal::new("".to_string());
-    let payment_method = RwSignal::new("Credit Card".to_string());
+    let payment_method = RwSignal::new(PaymentMethod::CreditCard);
     let transactions_trigger = RwSignal::new(0);
     let form_error = RwSignal::new(None::<String>);
 
     let show_payment_window = RwSignal::new(false);
     let otp = RwSignal::new("".to_string());
     let mock_tx_id = RwSignal::new(None::<i32>);
-    let mock_tx_status = RwSignal::new("".to_string());
+    let mock_tx_status = RwSignal::new(TransactionStatus::Initialize);
     let mock_display_qr = RwSignal::new(None::<String>);
     let mock_display_url = RwSignal::new(None::<String>);
 
@@ -700,7 +698,7 @@ pub fn StreamerPage() -> impl IntoView {
                 Ok(init) => {
                     show_payment_window.set(true);
                     mock_tx_id.set(Some(init.tx_id));
-                    mock_tx_status.set(init.status);
+                    mock_tx_status.set(init.status.clone());
                     mock_display_qr.set(init.display_qr);
                     mock_display_url.set(init.display_url);
 
@@ -718,7 +716,7 @@ pub fn StreamerPage() -> impl IntoView {
                                     if let Ok(status) = get_mock_payment_status(tx_id).await {
                                         let new_status = status.status;
                                         mock_tx_status.set(new_status.clone());
-                                        if new_status == "READY_FOR_DISPLAY" {
+                                        if new_status == TransactionStatus::ReadyForDisplay {
                                             poll_interval.update_value(|existing| {
                                                 existing.take();
                                             });
@@ -744,7 +742,8 @@ pub fn StreamerPage() -> impl IntoView {
             form_error.set(Some("Please enter a valid amount.".to_string()));
             return;
         }
-        if payment_method.get().trim().is_empty() {
+        // enum is never empty
+        if false {
             form_error.set(Some("Please select a payment method.".to_string()));
             return;
         }
@@ -752,7 +751,7 @@ pub fn StreamerPage() -> impl IntoView {
         show_payment_window.set(false);
         otp.set("".to_string());
         mock_tx_id.set(None);
-        mock_tx_status.set("INITIALIZE".to_string());
+        mock_tx_status.set(TransactionStatus::Initialize);
         mock_display_qr.set(None);
         mock_display_url.set(None);
 
@@ -935,7 +934,7 @@ pub fn StreamerPage() -> impl IntoView {
                                                   view! { <span class="text-on-surface-variant col-span-3">"No payment methods available."</span> }.into_any()
                                               } else {
                                                   methods.into_iter().map(|pm| {
-                                                      let icon = if pm == "Mock Auto" { "autorenew" } else { "pan_tool" };
+                                                      let icon = if pm == PaymentMethod::MockAuto { "autorenew" } else { "pan_tool" };
                                                       let pm_clone = pm.clone();
                                                       let pm_clone2 = pm.clone();
                                                       view! {
@@ -943,7 +942,7 @@ pub fn StreamerPage() -> impl IntoView {
                                                               <input checked=move || payment_method.get() == pm_clone2 class="hidden peer" name="payment" type="radio"/>
                                                               <div class="flex items-center justify-center gap-xs bg-white/5 backdrop-blur-md px-sm py-sm rounded-xl text-center border border-white/10 peer-checked:border-primary peer-checked:bg-primary/5 transition-all hover:-translate-y-[1px] hover:border-white/20">
                                                                   <span class="material-symbols-outlined text-primary text-[18px]">{icon}</span>
-                                                                  <span class="text-label-sm font-label-sm">{pm}</span>
+                                                                  <span class="text-label-sm font-label-sm">{pm.to_string()}</span>
                                                               </div>
                                                           </label>
                                                       }
@@ -980,7 +979,7 @@ pub fn StreamerPage() -> impl IntoView {
                                   <div class="flex items-center justify-between">
                                       <div class="text-on-surface font-semibold">{leptos_fluent::move_tr!("streamer-mock-payment-required")}</div>
                                       <div class="text-label-sm text-on-surface-variant">
-                                          {leptos_fluent::move_tr!("streamer-status-label")} " " <span class="text-on-surface">{status.clone()}</span>
+                                          {leptos_fluent::move_tr!("streamer-status-label")} " " <span class="text-on-surface">{status.to_string()}</span>
                                       </div>
                                   </div>
 
@@ -1017,20 +1016,20 @@ pub fn StreamerPage() -> impl IntoView {
                                       />
                                   </div>
 
-                                  {move || if status == "READY_FOR_DISPLAY" {
+                                  {move || if status == TransactionStatus::ReadyForDisplay {
                                       view! {
                                           <div data-testid="payment-success-msg" class="bg-secondary/10 border border-secondary/20 text-secondary rounded-xl px-md py-sm">
                                               {leptos_fluent::move_tr!("streamer-payment-success")}
                                           </div>
                                       }.into_any()
-                                  } else if status == "REJECTED" {
+                                  } else if status == TransactionStatus::Rejected {
                                       view! {
                                           <div class="bg-error/10 border border-error/20 text-error rounded-xl px-md py-sm">
                                               {leptos_fluent::move_tr!("streamer-payment-failed")}
                                           </div>
                                       }.into_any()
                                   } else {
-                                      if payment_method.get() == "Mock Manual" {
+                                      if payment_method.get() == PaymentMethod::MockManual {
                                           view! {
                                               <div class="flex gap-sm mt-sm">
                                                   <button
@@ -1038,7 +1037,7 @@ pub fn StreamerPage() -> impl IntoView {
                                                       on:click=move |_| {
                                                           if let Some(id) = mock_tx_id.get() {
                                                               accept_action.dispatch(id);
-                                                              mock_tx_status.set("READY_FOR_DISPLAY".to_string());
+                                                              mock_tx_status.set(TransactionStatus::ReadyForDisplay);
                                                               transactions_trigger.update(|n| *n += 1);
                                                           }
                                                       }
@@ -1048,7 +1047,7 @@ pub fn StreamerPage() -> impl IntoView {
                                                       on:click=move |_| {
                                                           if let Some(id) = mock_tx_id.get() {
                                                               reject_action.dispatch(id);
-                                                              mock_tx_status.set("REJECTED".to_string());
+                                                              mock_tx_status.set(TransactionStatus::Rejected);
                                                           }
                                                       }
                                                   >{leptos_fluent::move_tr!("streamer-btn-reject")}</button>
@@ -1103,7 +1102,7 @@ pub fn StreamerPage() -> impl IntoView {
                                                                           <span class="text-secondary font-bold text-body-lg shrink-0">"$" {format!("{:.2}", tx.amount)}</span>
                                                                       </div>
                                                                       <div class="flex items-center justify-between gap-sm text-label-sm text-on-surface-variant/80">
-                                                                          <span class="truncate">{leptos_fluent::move_tr!("streamer-via")} " " {tx.payment_method.clone()}</span>
+                                                                          <span class="truncate">{leptos_fluent::move_tr!("streamer-via")} " " {tx.payment_method.to_string()}</span>
                                                                           <span class="shrink-0">{tx.created_at.clone()}</span>
                                                                       </div>
                                                                   </div>
@@ -1153,7 +1152,7 @@ pub async fn get_streamer(username: String) -> Result<Option<DbStreamer>, Server
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let row = sqlx::query(
-        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods FROM streamers WHERE username = $1"
+        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods, overlay_paused, overlay_sound_enabled FROM streamers WHERE username = $1"
     )
     .bind(username)
     .fetch_optional(&pool)
@@ -1173,7 +1172,9 @@ pub async fn get_streamer(username: String) -> Result<Option<DbStreamer>, Server
                 user_id: r.try_get("user_id").unwrap_or(None),
                 overlay_token: r.get("overlay_token"),
                 active_overlay_session: r.try_get("active_overlay_session").unwrap_or(None),
-                payment_methods: r.try_get("payment_methods").unwrap_or_else(|_| vec!["Mock Auto".to_string(), "Mock Manual".to_string()]),
+                payment_methods: r.try_get("payment_methods").unwrap_or_else(|_| vec![PaymentMethod::MockAuto, PaymentMethod::MockManual]),
+                overlay_paused: r.try_get("overlay_paused").unwrap_or(false),
+                overlay_sound_enabled: r.try_get("overlay_sound_enabled").unwrap_or(true),
             }))
         }
         None => Ok(None),
@@ -1191,7 +1192,7 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let existing = sqlx::query(
-        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods FROM streamers WHERE user_id = $1"
+        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods, overlay_paused, overlay_sound_enabled FROM streamers WHERE user_id = $1"
     )
     .bind(&user.id)
     .fetch_optional(&pool)
@@ -1211,7 +1212,9 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
             user_id: r.try_get("user_id").unwrap_or(None),
             overlay_token: r.get("overlay_token"),
             active_overlay_session: r.try_get("active_overlay_session").unwrap_or(None),
-            payment_methods: r.try_get("payment_methods").unwrap_or_else(|_| vec!["Mock Auto".to_string(), "Mock Manual".to_string()]),
+            payment_methods: r.try_get("payment_methods").unwrap_or_else(|_| vec![PaymentMethod::MockAuto, PaymentMethod::MockManual]),
+            overlay_paused: r.try_get("overlay_paused").unwrap_or(false),
+            overlay_sound_enabled: r.try_get("overlay_sound_enabled").unwrap_or(true),
         }));
     }
 
@@ -1238,7 +1241,7 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
     let avatar_url = format!("https://api.dicebear.com/9.x/avataaars/svg?seed={}", urlencoding::encode(&username));
 
     let row = sqlx::query(
-        "INSERT INTO streamers (username, display_name, avatar_url, bio, is_live, user_id, overlay_token, payment_methods)
+        "INSERT INTO streamers (username, display_name, avatar_url, bio, is_live, user_id, overlay_token, payment_methods, overlay_paused, overlay_sound_enabled)
          VALUES ($1, $2, $3, $4, $5, $6, gen_random_uuid(), $7)
          RETURNING id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods"
     )
@@ -1248,7 +1251,7 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
     .bind(&bio)
     .bind(false)
     .bind(&user.id)
-    .bind(vec!["Mock Auto".to_string(), "Mock Manual".to_string()])
+    .bind(vec![PaymentMethod::MockAuto, PaymentMethod::MockManual])
     .fetch_one(&pool)
     .await
     .map_err(|e| ServerFnError::new(format!("Database insert failed: {}", e)))?;
@@ -1263,7 +1266,9 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
         user_id: row.try_get("user_id").unwrap_or(None),
         overlay_token: row.get("overlay_token"),
         active_overlay_session: row.try_get("active_overlay_session").unwrap_or(None),
-        payment_methods: row.try_get("payment_methods").unwrap_or_else(|_| vec!["Mock Auto".to_string(), "Mock Manual".to_string()]),
+        payment_methods: row.try_get("payment_methods").unwrap_or_else(|_| vec![PaymentMethod::MockAuto, PaymentMethod::MockManual]),
+        overlay_paused: row.try_get("overlay_paused").unwrap_or(false),
+        overlay_sound_enabled: row.try_get("overlay_sound_enabled").unwrap_or(true),
     }))
 }
 
@@ -1405,7 +1410,7 @@ pub async fn get_all_streamers() -> Result<Vec<DbStreamer>, ServerFnError> {
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let rows = sqlx::query(
-        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods FROM streamers ORDER BY is_live DESC, id DESC"
+        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods, overlay_paused, overlay_sound_enabled FROM streamers ORDER BY is_live DESC, id DESC"
     )
     .fetch_all(&pool)
     .await
@@ -1423,7 +1428,9 @@ pub async fn get_all_streamers() -> Result<Vec<DbStreamer>, ServerFnError> {
             user_id: r.try_get("user_id").unwrap_or(None),
             overlay_token: r.get("overlay_token"),
             active_overlay_session: r.try_get("active_overlay_session").unwrap_or(None),
-            payment_methods: r.try_get("payment_methods").unwrap_or_else(|_| vec!["Mock Auto".to_string(), "Mock Manual".to_string()]),
+            payment_methods: r.try_get("payment_methods").unwrap_or_else(|_| vec![PaymentMethod::MockAuto, PaymentMethod::MockManual]),
+            overlay_paused: r.try_get("overlay_paused").unwrap_or(false),
+            overlay_sound_enabled: r.try_get("overlay_sound_enabled").unwrap_or(true),
         }
     }).collect();
 
@@ -1461,7 +1468,7 @@ pub async fn create_donation(
     .bind(amount)
     .bind(message_opt)
     .bind(payment_method)
-    .bind("INITIALIZE")
+    .bind(TransactionStatus::Initialize)
     .fetch_one(&pool)
     .await
     .map_err(|e| ServerFnError::new(format!("Database insert failed: {}", e)))?;
@@ -1472,14 +1479,13 @@ pub async fn create_donation(
 
 #[cfg(feature = "ssr")]
 mod mock_payments {
+    use crate::db::TransactionStatus;
     use once_cell::sync::Lazy;
     use std::collections::HashMap;
     use tokio::sync::RwLock;
 
     #[derive(Clone, Debug)]
-    pub struct MockTxState {
-        pub status: String,
-    }
+    pub struct MockTxState { pub status: TransactionStatus, }
 
     pub static MOCK_TXS: Lazy<RwLock<HashMap<i32, MockTxState>>> =
         Lazy::new(|| RwLock::new(HashMap::new()));
@@ -1491,22 +1497,22 @@ pub async fn create_mock_payment(
     donor_name: String,
     amount: f64,
     message: String,
-    payment_method: String,
+    payment_method: PaymentMethod,
 ) -> Result<MockPaymentInit, ServerFnError> {
     let tx_id = create_donation(
         streamer_id,
         donor_name,
         amount,
         message,
-        payment_method.clone(),
+        payment_method.to_string(),
     )
     .await?;
 
-    let (display_qr, display_url) = match payment_method.as_str() {
-        "Mock Auto" => (None, Some(format!("https://example.com/mock-auto?tx_id={tx_id}"))),
-        "Mock Manual" => (None, Some(format!("https://example.com/mock-manual?tx_id={tx_id}"))),
-        "Crypto" => (Some(format!("MOCK-QR:tx_id={tx_id};amount={amount:.2}")), None),
-        "PayPal" => (None, Some(format!("https://example.com/mock-pay?provider=paypal&tx_id={tx_id}"))),
+    let (display_qr, display_url) = match payment_method {
+        PaymentMethod::MockAuto => (None, Some(format!("https://example.com/mock-auto?tx_id={tx_id}"))),
+        PaymentMethod::MockManual => (None, Some(format!("https://example.com/mock-manual?tx_id={tx_id}"))),
+        PaymentMethod::Crypto => (Some(format!("MOCK-QR:tx_id={tx_id};amount={amount:.2}")), None),
+        PaymentMethod::PayPal => (None, Some(format!("https://example.com/mock-pay?provider=paypal&tx_id={tx_id}"))),
         _ => (None, Some(format!("https://example.com/mock-pay?provider=card&tx_id={tx_id}"))),
     };
 
@@ -1517,7 +1523,7 @@ pub async fn create_mock_payment(
         mock_payments::MOCK_TXS
             .write()
             .await
-            .insert(tx_id, mock_payments::MockTxState { status: "INITIALIZE".to_string() });
+            .insert(tx_id, mock_payments::MockTxState { status: TransactionStatus::Initialize });
 
         let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
             .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
@@ -1525,10 +1531,10 @@ pub async fn create_mock_payment(
         let pm_clone = payment_method.clone();
         let delay_ms = 2000u64 + (chrono::Utc::now().timestamp_subsec_millis() as u64 % 3001u64);
         tokio::spawn(async move {
-            if pm_clone != "Mock Manual" {
+            if pm_clone != PaymentMethod::MockManual {
                 sleep(Duration::from_millis(delay_ms)).await;
                 if let Some(state) = mock_payments::MOCK_TXS.write().await.get_mut(&tx_id) {
-                    state.status = "READY_FOR_DISPLAY".to_string();
+                    state.status = TransactionStatus::ReadyForDisplay;
                 }
                 let _ = sqlx::query("UPDATE transactions SET status = 'READY_FOR_DISPLAY' WHERE id = $1")
                     .bind(tx_id)
@@ -1540,7 +1546,7 @@ pub async fn create_mock_payment(
 
     Ok(MockPaymentInit {
         tx_id,
-        status: "INITIALIZE".to_string(),
+        status: TransactionStatus::Initialize,
         display_qr,
         display_url,
     })
@@ -1551,7 +1557,7 @@ pub async fn accept_mock_payment(tx_id: i32) -> Result<(), ServerFnError> {
     #[cfg(feature = "ssr")]
     {
         if let Some(state) = mock_payments::MOCK_TXS.write().await.get_mut(&tx_id) {
-            state.status = "READY_FOR_DISPLAY".to_string();
+            state.status = TransactionStatus::ReadyForDisplay;
         }
 
         let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
@@ -1570,7 +1576,7 @@ pub async fn reject_mock_payment(tx_id: i32) -> Result<(), ServerFnError> {
     #[cfg(feature = "ssr")]
     {
         if let Some(state) = mock_payments::MOCK_TXS.write().await.get_mut(&tx_id) {
-            state.status = "REJECTED".to_string();
+            state.status = TransactionStatus::Rejected;
         }
 
         let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
@@ -1593,7 +1599,7 @@ pub async fn get_mock_payment_status(tx_id: i32) -> Result<MockPaymentStatus, Se
             .await
             .get(&tx_id)
             .map(|s| s.status.clone())
-            .unwrap_or_else(|| "INITIALIZE".to_string());
+            .unwrap_or_else(|| TransactionStatus::Initialize);
 
         return Ok(MockPaymentStatus { tx_id, status });
     }
@@ -1603,7 +1609,7 @@ pub async fn get_mock_payment_status(tx_id: i32) -> Result<MockPaymentStatus, Se
         let _ = tx_id;
         Ok(MockPaymentStatus {
             tx_id,
-            status: "INITIALIZE".to_string(),
+            status: TransactionStatus::Initialize,
         })
     }
 }
@@ -1799,8 +1805,71 @@ pub async fn init_overlay_session(token: String, session_id: String) -> Result<(
     Ok(())
 }
 
-#[server(PollOverlayTransactions, "/api")]
-pub async fn poll_overlay_transactions(token: String, session_id: String) -> Result<Vec<DbTransaction>, ServerFnError> {
+#[server(PrefetchUpcomingTransactions, "/api")]
+pub async fn prefetch_upcoming_transactions(token: String, session_id: String) -> Result<(Vec<DbTransaction>, bool, bool), ServerFnError> {
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    let streamer = sqlx::query(
+        "SELECT id, active_overlay_session, overlay_paused, overlay_sound_enabled FROM streamers WHERE overlay_token = $1"
+    )
+    .bind(&token)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+
+    use sqlx::Row;
+    let streamer = match streamer {
+        Some(s) => s,
+        None => return Err(ServerFnError::new("Invalid overlay token")),
+    };
+
+    let active_session: Option<String> = streamer.try_get("active_overlay_session").unwrap_or(None);
+    if active_session.as_deref() != Some(&session_id) {
+        return Err(ServerFnError::ServerError("SessionRevoked".to_string()));
+    }
+
+    let streamer_id: i32 = streamer.get("id");
+    let overlay_paused: bool = streamer.try_get("overlay_paused").unwrap_or(false);
+    let overlay_sound_enabled: bool = streamer.try_get("overlay_sound_enabled").unwrap_or(true);
+
+    let _ = sqlx::query("UPDATE streamers SET last_overlay_ping = CURRENT_TIMESTAMP WHERE id = $1")
+        .bind(streamer_id)
+        .execute(&pool)
+        .await;
+
+    if overlay_paused {
+        return Ok((vec![], overlay_paused, overlay_sound_enabled));
+    }
+
+    let rows = sqlx::query(
+        "SELECT t.id, t.streamer_id, t.donor_name, t.amount, t.message, t.payment_method, t.status, TO_CHAR(t.created_at, 'YYYY-MM-DD HH:MI AM') as formatted_date 
+         FROM transactions t
+         WHERE t.streamer_id = $1 AND t.status = 'READY_FOR_DISPLAY'
+         ORDER BY t.id ASC
+         LIMIT 5"
+    )
+    .bind(streamer_id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+
+    let txs: Vec<DbTransaction> = rows.into_iter().map(|r| DbTransaction {
+        id: r.get("id"),
+        streamer_id: r.get("streamer_id"),
+        donor_name: r.get("donor_name"),
+        amount: r.get("amount"),
+        message: r.get("message"),
+        payment_method: r.get("payment_method"),
+        status: r.get("status"),
+        created_at: r.get("formatted_date"),
+    }).collect();
+
+    Ok((txs, overlay_paused ,overlay_sound_enabled))
+}
+
+#[server(LockTransaction, "/api")]
+pub async fn lock_transaction(token: String, session_id: String, tx_id: i32) -> Result<bool, ServerFnError> {
     let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
@@ -1825,37 +1894,20 @@ pub async fn poll_overlay_transactions(token: String, session_id: String) -> Res
 
     let streamer_id: i32 = streamer.get("id");
 
-    let _ = sqlx::query("UPDATE streamers SET last_overlay_ping = CURRENT_TIMESTAMP WHERE id = $1")
-        .bind(streamer_id)
-        .execute(&pool)
-        .await;
-
-    let rows = sqlx::query(
-        "SELECT t.id, t.streamer_id, t.donor_name, t.amount, t.message, t.payment_method, t.status, TO_CHAR(t.created_at, 'YYYY-MM-DD HH:MI AM') as formatted_date 
-         FROM transactions t
-         WHERE t.streamer_id = $1 AND t.status = 'READY_FOR_DISPLAY'
-         ORDER BY t.id ASC
-         LIMIT 5"
+    // Try to update the transaction status from READY_FOR_DISPLAY to DISPLAYED
+    let res = sqlx::query(
+        "UPDATE transactions SET status = 'DISPLAYED' WHERE id = $1 AND streamer_id = $2 AND status = 'READY_FOR_DISPLAY'"
     )
+    .bind(tx_id)
     .bind(streamer_id)
-    .fetch_all(&pool)
+    .execute(&pool)
     .await
-    .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+    .map_err(|e| ServerFnError::new(format!("Database update failed: {}", e)))?;
 
-    Ok(rows
-        .into_iter()
-        .map(|r| DbTransaction {
-            id: r.get("id"),
-            streamer_id: r.get("streamer_id"),
-            donor_name: r.get("donor_name"),
-            amount: r.get("amount"),
-            message: r.get("message"),
-            payment_method: r.get("payment_method"),
-            status: r.get("status"),
-            created_at: r.get("formatted_date"),
-        })
-        .collect())
+    // If rows_affected > 0, we successfully locked it
+    Ok(res.rows_affected() > 0)
 }
+
 
 #[server(GetOverlayStatus, "/api")]
 pub async fn get_overlay_status() -> Result<bool, ServerFnError> {
@@ -1912,16 +1964,55 @@ pub async fn test_overlay_donation() -> Result<(), ServerFnError> {
 
     sqlx::query(
         "INSERT INTO transactions (streamer_id, donor_name, amount, message, payment_method, status)
-         VALUES ($1, $2, $3, $4, $5, 'READY_FOR_DISPLAY')"
+         VALUES ($1, $2, $3, $4, $5, $6)"
     )
     .bind(streamer_id)
     .bind("System Test")
     .bind(5.0)
     .bind("This is a test donation for your overlay!")
     .bind("test_mock")
+    .bind(TransactionStatus::ReadyForDisplay)
     .execute(&pool)
     .await
     .map_err(|e| ServerFnError::new(format!("Failed to insert test donation: {}", e)))?;
+    Ok(())
+}
 
+
+#[server(ToggleOverlayPause, "/api")]
+pub async fn toggle_overlay_pause(paused: bool) -> Result<(), ServerFnError> {
+    let user = get_me().await?.ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+    sqlx::query("UPDATE streamers SET overlay_paused = $1 WHERE user_id = $2")
+        .bind(paused).bind(&user.id).execute(&pool).await
+        .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+    Ok(())
+}
+
+#[server(ToggleOverlaySound, "/api")]
+pub async fn toggle_overlay_sound(enabled: bool) -> Result<(), ServerFnError> {
+    let user = get_me().await?.ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+    sqlx::query("UPDATE streamers SET overlay_sound_enabled = $1 WHERE user_id = $2")
+        .bind(enabled).bind(&user.id).execute(&pool).await
+        .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+    Ok(())
+}
+
+#[server(MarkTransactionViewed, "/api")]
+pub async fn mark_transaction_viewed(tx_id: i32) -> Result<(), ServerFnError> {
+    let user = get_me().await?.ok_or_else(|| ServerFnError::new("Unauthorized"))?;
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+    
+    let streamer_id: i32 = sqlx::query_scalar("SELECT id FROM streamers WHERE user_id = $1")
+        .bind(&user.id).fetch_one(&pool).await
+        .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
+        
+    sqlx::query("UPDATE transactions SET status = 'DISPLAYED' WHERE id = $1 AND streamer_id = $2")
+        .bind(tx_id).bind(streamer_id).execute(&pool).await
+        .map_err(|e| ServerFnError::new(format!("Database query failed: {}", e)))?;
     Ok(())
 }
