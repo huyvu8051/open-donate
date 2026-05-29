@@ -7,7 +7,9 @@ test.describe('Real-time Dashboard Flow', () => {
     test.setTimeout(60000); // Allow extra time for dual browser flow
 
     // Create two separate browser contexts to isolate sessions
-    const browser = await chromium.launch();
+    const browser = await chromium.launch({
+        args: ['--autoplay-policy=no-user-gesture-required']
+    });
     const streamerContext = await browser.newContext();
     const viewerContext = await browser.newContext();
 
@@ -17,38 +19,21 @@ test.describe('Real-time Dashboard Flow', () => {
     // ==========================================
     // 1. Streamer Logs In & Opens Dashboard
     // ==========================================
-    console.log('Streamer: Navigating to login...');
-    await streamerPage.goto('http://localhost:3000/api/login');
-    await streamerPage.waitForURL(/.*localhost:8080.*/);
+    console.log('Streamer: Navigating to register...');
+    await streamerPage.goto('/register');
 
-    const registerButton = streamerPage.locator('text="Register"').first();
-    await expect(registerButton).toBeVisible({ timeout: 5000 });
-    await registerButton.click();
-    await streamerPage.waitForURL(/.*\/login-actions\/registration.*/);
-
-    const fakeEmail = faker.internet.email();
+    const fakeEmail = faker.internet.email().toLowerCase();
     console.log(`Streamer: Registering new user: ${fakeEmail}`);
-    await streamerPage.fill('input[name="email"], input[type="email"]', fakeEmail);
-
-    const firstNameInput = streamerPage.locator('input[name="firstName"]');
-    if (await firstNameInput.count() > 0) await firstNameInput.fill(faker.person.firstName());
-    
-    const lastNameInput = streamerPage.locator('input[name="lastName"]');
-    if (await lastNameInput.count() > 0) await lastNameInput.fill(faker.person.lastName());
+    await streamerPage.fill('input[name="email"]', fakeEmail);
 
     const password = '@Aa123456';
-    await streamerPage.fill('input[type="password"], input[name="password"]', password);
-    const passwordConfirm = streamerPage.locator('input[name="password-confirm"]');
-    if (await passwordConfirm.count() > 0) await passwordConfirm.fill(password);
+    await streamerPage.fill('input[name="password"]', password);
+    await streamerPage.fill('input[name="password_confirm"]', password);
 
-    await streamerPage.click('button[type="submit"], input[type="submit"]');
+    await streamerPage.click('button[type="submit"]');
 
     console.log('Streamer: Waiting for redirect to dashboard...');
-    // In our new flow, auth callback redirects to /dashboard directly, but we accept / as fallback
-    await streamerPage.waitForURL(/.*localhost:3000.*/, { timeout: 15000 });
-    if (streamerPage.url() !== 'http://localhost:3000/dashboard') {
-        await streamerPage.goto('http://localhost:3000/dashboard');
-    }
+    await streamerPage.waitForURL(/\/dashboard/, { timeout: 15000 });
 
     await expect(streamerPage.getByTestId('streamer-dashboard-header')).toBeVisible({ timeout: 10000 });
 

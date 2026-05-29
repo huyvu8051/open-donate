@@ -18,7 +18,7 @@ export class StreamerSettingsPage {
   }
 
   async goto() {
-    await this.page.goto('http://localhost:3000/dashboard/settings');
+    await this.page.goto('/dashboard/settings');
     await this.waitForLoad();
   }
 

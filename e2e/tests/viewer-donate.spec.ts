@@ -8,7 +8,7 @@ test.describe('Viewer Donation Flow', () => {
     const streamerPage = new StreamerPage(page);
 
     // 1. Navigate directly to a seeded streamer's public page
-    await streamerPage.goto('huyvu8051');
+    await streamerPage.goto('neonviper');
 
     // Verify page loaded
     // await streamerPage.verifyStreamerName('HuyVu8051');

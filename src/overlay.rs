@@ -212,7 +212,7 @@ pub fn OverlayPage() -> impl IntoView {
                 return src;
             }
         }
-        "/public/default_donate.mp3".to_string()
+        "/default_donate.mp3".to_string()
     };
 
     view! {

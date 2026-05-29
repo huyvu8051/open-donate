@@ -1181,7 +1181,7 @@ pub async fn get_streamer(username: String) -> Result<Option<DbStreamer>, Server
                 overlay_paused: r.try_get("overlay_paused").unwrap_or(false),
                 overlay_sound_enabled: r.try_get("overlay_sound_enabled").unwrap_or(true),
                 selected_media_id: r.try_get("selected_media_id").unwrap_or(None),
-                fallback_media_file: r.try_get("fallback_media_file").unwrap_or_else(|_| "/public/default_donate.mp3".to_string()),
+                fallback_media_file: r.try_get("fallback_media_file").unwrap_or_else(|_| "/default_donate.mp3".to_string()),
             }))
         }
         None => Ok(None),
@@ -1223,7 +1223,7 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
             overlay_paused: r.try_get("overlay_paused").unwrap_or(false),
             overlay_sound_enabled: r.try_get("overlay_sound_enabled").unwrap_or(true),
             selected_media_id: r.try_get("selected_media_id").unwrap_or(None),
-            fallback_media_file: r.try_get("fallback_media_file").unwrap_or_else(|_| "/public/default_donate.mp3".to_string()),
+            fallback_media_file: r.try_get("fallback_media_file").unwrap_or_else(|_| "/default_donate.mp3".to_string()),
         }));
     }
 
@@ -1279,7 +1279,7 @@ pub async fn get_or_create_streamer() -> Result<Option<DbStreamer>, ServerFnErro
         overlay_paused: row.try_get("overlay_paused").unwrap_or(false),
         overlay_sound_enabled: row.try_get("overlay_sound_enabled").unwrap_or(true),
         selected_media_id: row.try_get("selected_media_id").unwrap_or(None),
-        fallback_media_file: row.try_get("fallback_media_file").unwrap_or_else(|_| "/public/default_donate.mp3".to_string()),
+        fallback_media_file: row.try_get("fallback_media_file").unwrap_or_else(|_| "/default_donate.mp3".to_string()),
     }))
 }
 
@@ -1490,7 +1490,7 @@ pub async fn get_all_streamers() -> Result<Vec<DbStreamer>, ServerFnError> {
             overlay_paused: r.try_get("overlay_paused").unwrap_or(false),
             overlay_sound_enabled: r.try_get("overlay_sound_enabled").unwrap_or(true),
             selected_media_id: r.try_get("selected_media_id").unwrap_or(None),
-            fallback_media_file: r.try_get("fallback_media_file").unwrap_or_else(|_| "/public/default_donate.mp3".to_string()),
+            fallback_media_file: r.try_get("fallback_media_file").unwrap_or_else(|_| "/default_donate.mp3".to_string()),
         }
     }).collect();
 
@@ -1896,7 +1896,7 @@ pub async fn prefetch_upcoming_transactions(token: String, session_id: String) -
     let overlay_paused: bool = streamer.try_get("overlay_paused").unwrap_or(false);
     let overlay_sound_enabled: bool = streamer.try_get("overlay_sound_enabled").unwrap_or(true);
     let primary_media_url: Option<String> = streamer.try_get("file_url").unwrap_or(None);
-    let fallback_media_file: String = streamer.try_get("fallback_media_file").unwrap_or_else(|_| "/public/default_donate.mp3".to_string());
+    let fallback_media_file: String = streamer.try_get("fallback_media_file").unwrap_or_else(|_| "/default_donate.mp3".to_string());
 
     let _ = sqlx::query("UPDATE streamers SET last_overlay_ping = CURRENT_TIMESTAMP WHERE id = $1")
         .bind(streamer_id)
@@ -2027,14 +2027,50 @@ pub async fn test_overlay_donation() -> Result<(), ServerFnError> {
         None => return Err(ServerFnError::new("Streamer not found")),
     };
 
+    let (donor_name, amount, message) = {
+        #[cfg(feature = "ssr")]
+        {
+            use rand::Rng;
+            let mut rng = rand::thread_rng();
+            let donor_names = [
+                "DragonSlayer99", "MoonWatcher", "PixelKnight", "StardustGamer",
+                "NightOwl_42", "CrypticFox", "SilverArrow", "ThunderBolt",
+                "CosmicRaider", "NeonPhoenix", "IronWolf", "QuantumByte"
+            ];
+            let donor_name = donor_names[rng.gen_range(0..donor_names.len())];
+            
+            let amounts = [1.0, 2.0, 5.0, 10.0, 20.0, 50.0, 100.0];
+            let amount = amounts[rng.gen_range(0..amounts.len())];
+            
+            let message_bodies = [
+                "Keep up the great content!",
+                "Love watching your streams!",
+                "You're the best streamer out there!",
+                "GG ez, but seriously great game!",
+                "Pog! That was insane!",
+                "First time donating, won't be the last!",
+                "Your community is amazing ❤️",
+                "This stream made my day!"
+            ];
+            let body = message_bodies[rng.gen_range(0..message_bodies.len())];
+            let message = format!("{}", body);
+            
+            (donor_name.to_string(), amount, message)
+        }
+        #[cfg(not(feature = "ssr"))]
+        {
+            ("System Test".to_string(), 5.0, "This is a test donation for your overlay!".to_string())
+        }
+    };
+
     sqlx::query(
         "INSERT INTO transactions (streamer_id, donor_name, amount, message, payment_method, status)
          VALUES ($1, $2, $3, $4, $5, $6)"
     )
     .bind(streamer_id)
-    .bind("System Test")
-    .bind(5.0)
-    .bind("This is a test donation for your overlay!")
+    .bind(donor_name)
+    .bind(amount)
+    .bind(message)
     .bind("test_mock")
     .bind(TransactionStatus::ReadyForDisplay)
     .execute(&pool)
@@ -2128,9 +2164,9 @@ pub async fn get_streamer_media() -> Result<Vec<crate::db::DbStreamerMedia>, Ser
 pub async fn get_default_medias() -> Result<Vec<String>, ServerFnError> {
     // Return list of available system default audio files
     Ok(vec![
-        "/public/default_donate.mp3".to_string(),
-        "/public/audio/funny_1.mp3".to_string(),
-        "/public/audio/cheer_1.mp3".to_string(),
+        "/default_donate.mp3".to_string(),
+        "/audio/funny_1.mp3".to_string(),
+        "/audio/cheer_1.mp3".to_string(),
     ])
 }
 

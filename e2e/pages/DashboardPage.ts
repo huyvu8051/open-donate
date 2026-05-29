@@ -1,40 +1,65 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import { expect, type Page, type Locator } from '@playwright/test';
 
 export class DashboardPage {
-  readonly page: Page;
-  readonly getStartedHeader: Locator;
-  readonly quickLinksContainer: Locator;
+    readonly page: Page;
+    readonly header: Locator;
+    readonly activeStatus: Locator;
+    readonly inactiveStatus: Locator;
+    readonly testOverlayBtn: Locator;
+    readonly copyOverlayLinkBtn: Locator;
+    readonly emailInput: Locator;
+    readonly submitBtn: Locator;
+    readonly togglePauseBtn: Locator;
+    readonly toggleSoundBtn: Locator;
 
-  constructor(page: Page) {
-    this.page = page;
-    this.getStartedHeader = page.locator('text=Streamer Dashboard');
-    this.quickLinksContainer = page.locator('.glass-card').first();
-  }
+    constructor(page: Page) {
+        this.page = page;
+        this.header = page.getByTestId('streamer-dashboard-header');
+        this.activeStatus = page.getByTestId('overlay-status-active');
+        this.inactiveStatus = page.getByTestId('overlay-status-inactive');
+        this.testOverlayBtn = page.getByTestId('test-overlay-btn');
+        this.copyOverlayLinkBtn = page.getByTestId('copy-overlay-link-btn');
+        this.togglePauseBtn = page.getByTestId('toggle-pause-btn');
+        this.toggleSoundBtn = page.getByTestId('toggle-sound-btn');
+        
+        // Register page locators
+        this.emailInput = page.locator('input[name="email"]');
+        this.submitBtn = page.locator('button[type="submit"]');
+    }
 
-  async goto() {
-    await this.page.goto('/dashboard');
-  }
+    async register(email: string) {
+        await this.page.goto('/register');
+        await this.emailInput.fill(email);
+        await this.page.locator('input[name="password"]').fill('StrongPassword123!');
+        await this.page.locator('input[name="password_confirm"]').fill('StrongPassword123!');
+        await this.submitBtn.click();
+    }
 
-  async setMockAuthCookie(userId: string, name: string, email: string) {
-    // We mock the auth_token by creating a dummy JWT format or simply expecting the backend 
-    // to handle testing logic if a secret cookie is passed. 
-    // Since our backend uses Zitadel JWT, mocking it in a real E2E requires a valid signed token 
-    // unless the backend is in a test mode that accepts fake tokens.
-    // For this test plan, we assume the backend has a backdoor in DEV mode to accept mock tokens,
-    // or we are just setting a cookie the backend can decode (e.g., using a test JWT secret).
-    // In a real project, we would use a library like jsonwebtoken here to sign a fake token
-    // with the known ZITADEL_ISSUER and secret if it's asymmetric/symmetric.
-    
-    // For this example, we'll set a dummy token structure that would pass if the backend allowed it,
-    // or we leave a placeholder comment. The E2E plan was to "Mock auth cookie".
-    // In Leptos, the cookie name is `auth_token`.
-    await this.page.context().addCookies([
-      {
-        name: 'auth_token',
-        value: `mock_jwt_for_${userId}_${email}`, // In real life, sign a proper JWT here
-        domain: 'localhost',
-        path: '/',
-      }
-    ]);
-  }
+    async waitForDashboard() {
+        await expect(this.header).toBeVisible({ timeout: 10000 });
+    }
+
+    async checkInactiveStatus() {
+        await expect(this.inactiveStatus).toBeVisible({ timeout: 10000 });
+    }
+
+    async checkActiveStatus() {
+        await expect(this.activeStatus).toBeVisible({ timeout: 15000 });
+    }
+
+    async copyOverlayLink() {
+        await this.copyOverlayLinkBtn.click();
+    }
+
+    async testOverlay() {
+        await this.testOverlayBtn.click();
+    }
+
+    async togglePause() {
+        await this.togglePauseBtn.click();
+    }
+
+    async toggleSound() {
+        await this.toggleSoundBtn.click();
+    }
 }

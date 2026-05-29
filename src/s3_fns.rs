@@ -44,9 +44,9 @@ pub async fn get_streamer_media() -> Result<Vec<crate::db::DbStreamerMedia>, Ser
 pub async fn get_default_medias() -> Result<Vec<String>, ServerFnError> {
     // Return list of available system default audio files
     Ok(vec![
-        "/public/default_donate.mp3".to_string(),
-        "/public/audio/funny_1.mp3".to_string(),
-        "/public/audio/cheer_1.mp3".to_string(),
+        "/default_donate.mp3".to_string(),
+        "/audio/funny_1.mp3".to_string(),
+        "/audio/cheer_1.mp3".to_string(),
     ])
 }
 

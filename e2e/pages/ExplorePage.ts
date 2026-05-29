@@ -14,7 +14,7 @@ export class ExplorePage {
   }
 
   async verifyLoaded() {
-    await expect(this.page.getByRole('heading', { name: 'Explore Creators' })).toBeVisible();
+    await expect(this.page.getByRole('heading', { name: 'Explore Streamers' })).toBeVisible();
   }
 
   async clickRandomStreamer(): Promise<{ username: string, displayName: string }> {

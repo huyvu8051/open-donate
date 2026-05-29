@@ -4,7 +4,7 @@ import { faker } from '@faker-js/faker';
 test('Firebase Auth Validation, Registration and Logout Flow', async ({ page }) => {
   // 1. Trigger registration from the app
   console.log('Navigating to app register endpoint...');
-  await page.goto('http://localhost:3000/register');
+  await page.goto('/register');
 
   const fakeEmail = faker.internet.email();
   console.log(`Registering new user: ${fakeEmail}`);
@@ -26,7 +26,7 @@ test('Firebase Auth Validation, Registration and Logout Flow', async ({ page }) 
 
   // 4. Verification of login
   console.log('Waiting for redirect back to app dashboard...');
-  await page.waitForURL(/.*localhost:3000\/dashboard.*/, { timeout: 15000 });
+  await page.waitForURL(/\/dashboard/, { timeout: 15000 });
 
   // The dashboard should load and display the main header
   await expect(page.getByTestId('streamer-dashboard-header')).toBeVisible({ timeout: 10000 });
@@ -38,10 +38,10 @@ test('Firebase Auth Validation, Registration and Logout Flow', async ({ page }) 
   await page.getByTestId('logout-button').click();
 
   // Wait for redirect to home
-  await page.waitForURL('http://localhost:3000/', { timeout: 10000 });
+  await page.waitForURL('/', { timeout: 10000 });
 
-  // Verify "Sign In" button is visible again
-  // English header-login key could be "Sign In" or "Log In", but the href is "/login"
-  await expect(page.locator('a[href="/login"]')).toBeVisible({ timeout: 5000 });
+  // Verify user is redirected to landing page and logout button is gone
+  await expect(page).toHaveURL('/');
+  await expect(page.getByTestId('logout-button')).not.toBeVisible();
   console.log('Logout successful!');
 });

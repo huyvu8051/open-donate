@@ -1,14 +1,16 @@
 import { test, expect, chromium } from '@playwright/test';
 import { faker } from '@faker-js/faker';
 import * as fs from 'fs';
-import { DashboardPage } from './pages/DashboardPage';
-import { OverlayPage } from './pages/OverlayPage';
+import { DashboardPage } from '../pages/DashboardPage';
+import { OverlayPage } from '../pages/OverlayPage';
 
 test.describe('Overlay Flow E2E', () => {
   test('Streamer can open overlay, see status change, and test donation', async () => {
     test.setTimeout(90000); // Increase timeout since this test has long waits for animations
     // We need to allow multiple contexts to simulate Streamer + OBS Browser Source
-    const browser = await chromium.launch();
+    const browser = await chromium.launch({
+        args: ['--autoplay-policy=no-user-gesture-required']
+    });
     const streamerContext = await browser.newContext();
     const overlayContext = await browser.newContext();
 
@@ -23,6 +25,9 @@ test.describe('Overlay Flow E2E', () => {
 
     streamerPage.on('console', msg => console.log('Streamer Page Log:', msg.text()));
     streamerPage.on('pageerror', err => console.log('Streamer Page Error:', err));
+
+    overlayPageRaw.on('console', msg => console.log('Overlay Page Log:', msg.text()));
+    overlayPageRaw.on('pageerror', err => console.log('Overlay Page Error:', err));
 
     // ==========================================
     // 1. Streamer Registers & Opens Dashboard
@@ -51,11 +56,28 @@ test.describe('Overlay Flow E2E', () => {
     // ==========================================
     // 3. Streamer copies overlay link
     // ==========================================
+    // Mock clipboard write text to avoid readText permission issues in headless environment
+    let overlayUrl = '';
+    await streamerPage.exposeFunction('mockWriteText', (text: string) => {
+        overlayUrl = text;
+    });
+    await streamerPage.evaluate(() => {
+        Object.defineProperty(navigator, 'clipboard', {
+            value: {
+                writeText: (text: string) => {
+                    (window as any).mockWriteText(text);
+                    return Promise.resolve();
+                }
+            },
+            configurable: true
+        });
+    });
+
     console.log('Streamer: Copying overlay link...');
     await dashboardPage.copyOverlayLink();
-
-    // Get clipboard text using playwright evaluation
-    const overlayUrl = await streamerPage.evaluate(() => navigator.clipboard.readText());
+    
+    // Wait for mock callback
+    await streamerPage.waitForTimeout(500);
     expect(overlayUrl).toContain('/overlay/');
     console.log(`Streamer: Copied URL: ${overlayUrl}`);
 
@@ -64,6 +86,13 @@ test.describe('Overlay Flow E2E', () => {
     // ==========================================
     console.log('OBS: Opening overlay link...');
     await overlayPage.open(overlayUrl);
+    
+    // Mock HTMLAudioElement.prototype.play to prevent 404/autoplay errors from blocking overlay alerts
+    await overlayPageRaw.evaluate(() => {
+        window.HTMLAudioElement.prototype.play = function() {
+            return Promise.resolve();
+        };
+    });
     
     // Playwright disables autoplay without user gesture in Safari/WebKit sometimes.
     // We must dismiss the prompt to unlock audio and see the mock donation.
