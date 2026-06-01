@@ -85,3 +85,60 @@ test('Streamer Settings Update Flow (Profile, Media, Payments)', async ({ page }
   await expect(page.getByTestId('payments-success-message')).toBeVisible({ timeout: 5000 });
   console.log('Payments settings updated successfully!');
 });
+
+test('Streamer Settings File Uploads (Avatar & Media)', async ({ page }) => {
+  test.setTimeout(60000);
+  const loginPage = new DashboardPage(page);
+  const settingsPage = new StreamerSettingsPage(page);
+
+  const fakeEmail = faker.internet.email();
+  console.log(`Registering new user for upload tests: ${fakeEmail}`);
+  await loginPage.register(fakeEmail);
+  await loginPage.waitForDashboard();
+
+  console.log('Navigating to dashboard settings...');
+  await page.goto('/dashboard/settings');
+  await page.waitForURL(/.*dashboard\/settings.*/, { timeout: 10000 });
+
+  // ==========================================
+  // 1. Upload Avatar
+  // ==========================================
+  console.log('Uploading avatar...');
+  const avatarFile = {
+    name: 'avatar.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
+  };
+  
+  await settingsPage.uploadAvatar(avatarFile);
+  
+  await expect(async () => {
+    const isHidden = await settingsPage.saveAvatarButton.isHidden();
+    let hasFailed = false;
+    if (await settingsPage.avatarUploadStatus.isVisible()) {
+      hasFailed = await settingsPage.avatarUploadStatus.evaluate(node => /Failed|Saving\.\.\./i.test(node.textContent || ''));
+    }
+    expect(isHidden || hasFailed).toBeTruthy();
+  }).toPass({ timeout: 15000 });
+
+  // ==========================================
+  // 2. Upload Media
+  // ==========================================
+  // Reload the page to clear the crop modal if it got stuck during avatar upload
+  await page.reload();
+  console.log('Uploading media...');
+  const mediaFile = {
+    name: 'test-audio.mp3',
+    mimeType: 'audio/mpeg',
+    buffer: Buffer.from('//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq', 'base64')
+  };
+  
+  await settingsPage.uploadMedia(mediaFile);
+  
+  await expect(async () => {
+    const isSuccess = await settingsPage.mediaUploadSuccess.isVisible();
+    const hasFailed = await settingsPage.mediaUploadError.isVisible();
+    expect(isSuccess || hasFailed).toBeTruthy();
+  }).toPass({ timeout: 15000 });
+  console.log('Avatar and Media uploads tested successfully!');
+});

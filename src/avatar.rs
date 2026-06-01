@@ -145,7 +145,7 @@ pub fn AvatarSettingsSection(streamer: crate::db::DbStreamer) -> impl IntoView {
                     <div class="flex flex-col gap-2">
                         <label class="px-4 py-2 bg-primary text-on-primary rounded-xl font-bold cursor-pointer hover:bg-primary/90 transition-colors text-center inline-block">
                             "Upload Custom Avatar"
-                            <input type="file" class="hidden" accept="image/*" on:change=on_file_change/>
+                            <input data-testid="avatar-file-input" type="file" class="hidden" accept="image/*" on:change=on_file_change/>
                         </label>
                         <button class="px-4 py-2 bg-surface-variant text-on-surface-variant rounded-xl font-bold hover:text-on-surface transition-colors" on:click=generate_random>
                             "Generate Random"
@@ -181,10 +181,10 @@ pub fn AvatarSettingsSection(streamer: crate::db::DbStreamer) -> impl IntoView {
                                     <img id="avatar-crop-img" src=url class="max-w-full max-h-full block" />
                                 })}
                             </div>
-                            <div class="text-sm text-primary">{move || upload_status.get()}</div>
+                            <div data-testid="avatar-upload-status" class="text-sm text-primary">{move || upload_status.get()}</div>
                             <div class="flex justify-end gap-2">
                                 <button class="px-4 py-2 bg-surface-variant rounded-xl font-bold" on:click=move |_| set_is_cropping.set(false)>"Cancel"</button>
-                                <button class="px-4 py-2 bg-primary text-on-primary rounded-xl font-bold" on:click=on_crop_save>"Save Avatar"</button>
+                                <button data-testid="save-avatar-button" class="px-4 py-2 bg-primary text-on-primary rounded-xl font-bold" on:click=on_crop_save>"Save Avatar"</button>
                             </div>
                         </div>
                     </div>

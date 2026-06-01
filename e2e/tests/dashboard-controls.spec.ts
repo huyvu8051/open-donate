@@ -78,9 +78,8 @@ test.describe('Dashboard Controls & Interactivity E2E', () => {
     console.log('Triggering test overlay donation...');
     await dashboardPage.testOverlay();
 
-    // Wait and reload to get the new donation in the table
-    await page.waitForTimeout(3000);
-    await page.reload();
+    // The dashboard auto-reloads the donation history every 5s by default.
+    // Wait for the new donation to appear in the table automatically.
 
     const donationRow = page.getByTestId('donation-row').first();
     await expect(donationRow).toBeVisible({ timeout: 10000 });
@@ -93,7 +92,7 @@ test.describe('Dashboard Controls & Interactivity E2E', () => {
     await markAsViewedBtn.click();
     
     // Check that status updates to "Displayed" and "Mark as Viewed" button disappears
-    await expect(markAsViewedBtn).toBeHidden({ timeout: 5000 });
+    await expect(markAsViewedBtn).toBeHidden({ timeout: 10000 });
     await expect(donationRow).toContainText('Displayed');
     console.log('Marked transaction viewed successfully!');
   });

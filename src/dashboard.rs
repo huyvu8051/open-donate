@@ -790,16 +790,16 @@ pub fn MediaSettingsSection() -> impl IntoView {
                     }
                 }>
                     <div class="flex flex-col gap-2">
-                        <input type="file" name="file" accept="audio/*,video/*" class="text-on-surface text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-on-primary hover:file:bg-primary/80" required />
-                        <button type="submit" class=move || format!("bg-primary text-on-primary font-bold px-4 py-2 rounded-xl mt-2 w-fit {}", if upload_pending.get() { "opacity-50" } else { "" }) disabled=move || upload_pending.get()>
+                        <input data-testid="media-file-input" type="file" name="file" accept="audio/*,video/*" class="text-on-surface text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-on-primary hover:file:bg-primary/80" required />
+                        <button data-testid="upload-media-button" type="submit" class=move || format!("bg-primary text-on-primary font-bold px-4 py-2 rounded-xl mt-2 w-fit {}", if upload_pending.get() { "opacity-50" } else { "" }) disabled=move || upload_pending.get()>
                             {move || if upload_pending.get() { "Uploading..." } else { "Upload File (Max 2MB)" }}
                         </button>
                     </div>
                 </form>
                 <Suspense fallback=|| ()>
                     {move || match upload_result.get() {
-                        Some(Ok(_)) => view! { <div class="text-green-400 mt-2 text-sm font-bold">"Upload successful! Please refresh the page to see it."</div> }.into_any(),
-                        Some(Err(e)) => view! { <div class="text-red-400 mt-2 text-sm font-bold">{format!("Error: {}", e)}</div> }.into_any(),
+                        Some(Ok(_)) => view! { <div data-testid="media-upload-success" class="text-green-400 mt-2 text-sm font-bold">"Upload successful! Please refresh the page to see it."</div> }.into_any(),
+                        Some(Err(e)) => view! { <div data-testid="media-upload-error" class="text-red-400 mt-2 text-sm font-bold">{format!("Error: {}", e)}</div> }.into_any(),
                         None => view! {}.into_any()
                     }}
                 </Suspense>
