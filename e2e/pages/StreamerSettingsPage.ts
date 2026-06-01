@@ -38,6 +38,7 @@ export class StreamerSettingsPage {
 
   async goto() {
     await this.page.goto('/dashboard/settings');
+    await this.page.waitForTimeout(2000);
     await this.waitForLoad();
   }
 

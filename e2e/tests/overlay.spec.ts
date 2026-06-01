@@ -2,6 +2,7 @@ import { test, expect, chromium } from '@playwright/test';
 import { faker } from '@faker-js/faker';
 import * as fs from 'fs';
 import { DashboardPage } from '../pages/DashboardPage';
+import { RegisterPage } from '../pages/RegisterPage';
 import { OverlayPage } from '../pages/OverlayPage';
 
 test.describe('Overlay Flow E2E', () => {
@@ -21,6 +22,7 @@ test.describe('Overlay Flow E2E', () => {
     const overlayPageRaw = await overlayContext.newPage();
 
     const dashboardPage = new DashboardPage(streamerPage);
+    const registerPage = new RegisterPage(streamerPage);
     const overlayPage = new OverlayPage(overlayPageRaw);
 
     streamerPage.on('console', msg => console.log('Streamer Page Log:', msg.text()));
@@ -36,7 +38,7 @@ test.describe('Overlay Flow E2E', () => {
     const testEmail = faker.internet.email();
     console.log(`Streamer: Registering with email: ${testEmail}`);
     
-    await dashboardPage.register(testEmail);
+    await registerPage.register(testEmail);
 
     console.log('Streamer: Waiting for redirect to dashboard...');
     await dashboardPage.waitForDashboard();

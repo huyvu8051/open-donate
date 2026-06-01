@@ -134,7 +134,10 @@ fn KpiCard(
     view! {
         <div class="bg-surface-container-low/40 backdrop-blur-md border border-white/10 rounded-2xl p-lg flex flex-col gap-sm">
             <div class="flex items-center gap-sm">
-                <div class=format!("w-10 h-10 rounded-xl flex items-center justify-center {}", icon_bg)>
+                <div class=format!(
+                    "w-10 h-10 rounded-xl flex items-center justify-center {}",
+                    icon_bg,
+                )>
                     <span class=format!("material-symbols-outlined {}", color_class)>{icon}</span>
                 </div>
                 <span class="text-label-md text-on-surface-variant font-medium">{label}</span>
@@ -196,48 +199,88 @@ pub fn AnalyticsPage() -> impl IntoView {
                     {leptos_fluent::move_tr!("analytics-title")}
                 </h1>
                 <div class="flex bg-surface-variant/50 p-1 rounded-xl self-start">
-                    {["day", "week", "month"].into_iter().map(|range| {
-                        let label = match range { "day" => "24h", "week" => "7d", "month" => "30d", _ => "" };
-                        view! {
-                            <button
-                                class=move || format!(
-                                    "px-4 py-1.5 rounded-lg text-label-sm font-bold transition-all {}",
-                                    if time_range.get() == range { "bg-primary text-on-primary shadow-md" } else { "text-on-surface-variant hover:text-on-surface" }
-                                )
-                                on:click=move |_| set_time_range.set(range.to_string())
-                            >
-                                {label}
-                            </button>
-                        }
-                    }).collect_view()}
+                    {["day", "week", "month"]
+                        .into_iter()
+                        .map(|range| {
+                            let label = match range {
+                                "day" => "24h",
+                                "week" => "7d",
+                                "month" => "30d",
+                                _ => "",
+                            };
+                            view! {
+                                <button
+                                    class=move || {
+                                        format!(
+                                            "px-4 py-1.5 rounded-lg text-label-sm font-bold transition-all {}",
+                                            if time_range.get() == range {
+                                                "bg-primary text-on-primary shadow-md"
+                                            } else {
+                                                "text-on-surface-variant hover:text-on-surface"
+                                            },
+                                        )
+                                    }
+                                    on:click=move |_| set_time_range.set(range.to_string())
+                                >
+                                    {label}
+                                </button>
+                            }
+                        })
+                        .collect_view()}
                 </div>
             </div>
 
-            <Suspense fallback=move || view! {
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-md animate-pulse">
-                    {(0..4).map(|_| view! { <div class="h-28 bg-surface-container-low/40 rounded-2xl"/> }).collect_view()}
-                </div>
+            <Suspense fallback=move || {
+                view! {
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-md animate-pulse">
+                        {(0..4)
+                            .map(|_| {
+                                view! {
+                                    <div class="h-28 bg-surface-container-low/40 rounded-2xl" />
+                                }
+                            })
+                            .collect_view()}
+                    </div>
+                }
             }>
-                {move || analytics_resource.get().map(|res| match res {
-                    Err(e) => view! {
-                        <div class="text-error bg-error/10 p-md rounded-xl">
-                            {format!("Failed to load analytics: {:?}", e)}
-                        </div>
-                    }.into_any(),
-                    Ok(analytics) => view! {
-                        // Only render charts after ECharts script is loaded
-                        <Show
-                            when=move || echarts_ready.get()
-                            fallback=move || view! {
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-md animate-pulse">
-                                    {(0..4).map(|_| view! { <div class="h-28 bg-surface-container-low/40 rounded-2xl"/> }).collect_view()}
-                                </div>
+                {move || {
+                    analytics_resource
+                        .get()
+                        .map(|res| match res {
+                            Err(e) => {
+                                view! {
+                                    <div class="text-error bg-error/10 p-md rounded-xl">
+                                        {format!("Failed to load analytics: {:?}", e)}
+                                    </div>
+                                }
+                                    .into_any()
                             }
-                        >
-                            <AnalyticsDashboard analytics=analytics.clone() />
-                        </Show>
-                    }.into_any()
-                })}
+                            Ok(analytics) => {
+                                view! {
+                                    // Only render charts after ECharts script is loaded
+                                    <Show
+                                        when=move || echarts_ready.get()
+                                        fallback=move || {
+                                            view! {
+                                                <div class="grid grid-cols-2 md:grid-cols-4 gap-md animate-pulse">
+                                                    {(0..4)
+                                                        .map(|_| {
+                                                            view! {
+                                                                <div class="h-28 bg-surface-container-low/40 rounded-2xl" />
+                                                            }
+                                                        })
+                                                        .collect_view()}
+                                                </div>
+                                            }
+                                        }
+                                    >
+                                        <AnalyticsDashboard analytics=analytics.clone() />
+                                    </Show>
+                                }
+                                    .into_any()
+                            }
+                        })
+                }}
             </Suspense>
         </div>
     }
@@ -329,7 +372,7 @@ fn AnalyticsDashboard(analytics: StreamerAnalytics) -> impl IntoView {
                 chart_id="chart-revenue-time"
                 height="h-72"
             >
-                <span/>
+                <span />
             </ChartCard>
             <ChartCard
                 icon="trending_up"
@@ -337,7 +380,7 @@ fn AnalyticsDashboard(analytics: StreamerAnalytics) -> impl IntoView {
                 chart_id="chart-cumulative"
                 height="h-72"
             >
-                <span/>
+                <span />
             </ChartCard>
         </div>
 
@@ -349,7 +392,7 @@ fn AnalyticsDashboard(analytics: StreamerAnalytics) -> impl IntoView {
                 chart_id="chart-top-donors"
                 height="h-80"
             >
-                <span/>
+                <span />
             </ChartCard>
             <ChartCard
                 icon="pie_chart"
@@ -357,7 +400,7 @@ fn AnalyticsDashboard(analytics: StreamerAnalytics) -> impl IntoView {
                 chart_id="chart-payment-method"
                 height="h-80"
             >
-                <span/>
+                <span />
             </ChartCard>
         </div>
 
@@ -368,7 +411,7 @@ fn AnalyticsDashboard(analytics: StreamerAnalytics) -> impl IntoView {
             chart_id="chart-amount-dist"
             height="h-64"
         >
-            <span/>
+            <span />
         </ChartCard>
     }
 }

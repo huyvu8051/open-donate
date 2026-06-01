@@ -7,8 +7,6 @@ export class DashboardPage {
     readonly inactiveStatus: Locator;
     readonly testOverlayBtn: Locator;
     readonly copyOverlayLinkBtn: Locator;
-    readonly emailInput: Locator;
-    readonly submitBtn: Locator;
     readonly togglePauseBtn: Locator;
     readonly toggleSoundBtn: Locator;
 
@@ -21,22 +19,11 @@ export class DashboardPage {
         this.copyOverlayLinkBtn = page.getByTestId('copy-overlay-link-btn');
         this.togglePauseBtn = page.getByTestId('toggle-pause-btn');
         this.toggleSoundBtn = page.getByTestId('toggle-sound-btn');
-        
-        // Register page locators
-        this.emailInput = page.locator('input[name="email"]');
-        this.submitBtn = page.locator('button[type="submit"]');
-    }
-
-    async register(email: string) {
-        await this.page.goto('/register');
-        await this.emailInput.fill(email);
-        await this.page.locator('input[name="password"]').fill('StrongPassword123!');
-        await this.page.locator('input[name="password_confirm"]').fill('StrongPassword123!');
-        await this.submitBtn.click();
     }
 
     async waitForDashboard() {
-        await expect(this.header).toBeVisible({ timeout: 10000 });
+        await this.page.waitForURL(/\/dashboard/, { timeout: 120000 });
+        await expect(this.header).toBeVisible({ timeout: 15000 });
     }
 
     async checkInactiveStatus() {

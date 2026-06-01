@@ -1,7 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { faker } from '@faker-js/faker';
+import { DashboardPage } from '../pages/DashboardPage';
+import { RegisterPage } from '../pages/RegisterPage';
 
-test('Firebase Auth Validation, Registration and Logout Flow', async ({ page }) => {
+test('Auth Validation, Registration and Logout Flow', async ({ page }) => {
+  const dashboardPage = new DashboardPage(page);
+  const registerPage = new RegisterPage(page);
+
   // 1. Trigger registration from the app
   console.log('Navigating to app register endpoint...');
   await page.goto('/register');
@@ -9,28 +14,25 @@ test('Firebase Auth Validation, Registration and Logout Flow', async ({ page }) 
   const fakeEmail = faker.internet.email();
   console.log(`Registering new user: ${fakeEmail}`);
 
-  await page.fill('input[name="email"]', fakeEmail);
+  await page.getByTestId('email-input').fill(fakeEmail);
 
   // 2. Test Validation (Mismatching passwords)
   const password = '@Aa123456';
-  await page.fill('input[name="password"]', password);
-  await page.fill('input[name="password_confirm"]', 'differentpassword');
-  await page.click('button[type="submit"]');
+  await page.getByTestId('password-input').fill(password);
+  await page.getByTestId('password-confirm-input').fill('differentpassword');
+  await page.getByTestId('auth-submit-btn').click();
 
   // Verify error message
   await expect(page.locator('.bg-error-container')).toBeVisible({ timeout: 5000 });
 
-  // 3. Fix passwords and Register
-  await page.fill('input[name="password_confirm"]', password);
-  await page.click('button[type="submit"]');
+  // 3. Fix passwords and Register using robust RegisterPage method
+  console.log('Executing successful registration flow...');
+  await registerPage.register(fakeEmail);
 
   // 4. Verification of login
-  console.log('Waiting for redirect back to app dashboard...');
-  await page.waitForURL(/\/dashboard/, { timeout: 15000 });
-
-  // The dashboard should load and display the main header
-  await expect(page.getByTestId('streamer-dashboard-header')).toBeVisible({ timeout: 10000 });
-  console.log('Test completed successfully! User was authenticated via Firebase REST API.');
+  console.log('Redirected to app dashboard!');
+  await dashboardPage.waitForDashboard();
+  console.log('Test completed successfully! User was authenticated via Leptos backend.');
 
   // 5. Test Logout
   console.log('Testing logout flow...');

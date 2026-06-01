@@ -134,57 +134,105 @@ pub fn AvatarSettingsSection(streamer: crate::db::DbStreamer) -> impl IntoView {
     };
 
     view! {
-        <Stylesheet href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css"/>
-        <Script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"/>
-        
+        <Stylesheet href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
+        <Script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js" />
+
         <div class="bg-surface-variant/20 p-6 rounded-2xl border border-white/5 mb-8">
             <h2 class="text-headline-sm font-headline-sm text-on-surface mb-4">"Profile Avatar"</h2>
             <div class="flex flex-col gap-4">
                 <div class="flex items-center gap-4">
-                    <img src=move || current_avatar.get() class="w-24 h-24 rounded-full object-cover bg-surface-container-highest border-2 border-primary/50"/>
+                    <img
+                        src=move || current_avatar.get()
+                        class="w-24 h-24 rounded-full object-cover bg-surface-container-highest border-2 border-primary/50"
+                    />
                     <div class="flex flex-col gap-2">
                         <label class="px-4 py-2 bg-primary text-on-primary rounded-xl font-bold cursor-pointer hover:bg-primary/90 transition-colors text-center inline-block">
                             "Upload Custom Avatar"
-                            <input data-testid="avatar-file-input" type="file" class="hidden" accept="image/*" on:change=on_file_change/>
+                            <input
+                                data-testid="avatar-file-input"
+                                type="file"
+                                class="hidden"
+                                accept="image/*"
+                                on:change=on_file_change
+                            />
                         </label>
-                        <button class="px-4 py-2 bg-surface-variant text-on-surface-variant rounded-xl font-bold hover:text-on-surface transition-colors" on:click=generate_random>
+                        <button
+                            class="px-4 py-2 bg-surface-variant text-on-surface-variant rounded-xl font-bold hover:text-on-surface transition-colors"
+                            on:click=generate_random
+                        >
                             "Generate Random"
                         </button>
                     </div>
                 </div>
-                
+
                 <Show when=move || !random_avatars.get().is_empty()>
                     <div class="mt-4 p-4 bg-surface-container rounded-xl border border-white/5">
                         <h3 class="text-label-md font-bold mb-2">"Select a random avatar:"</h3>
                         <div class="grid grid-cols-5 gap-2">
-                            {move || random_avatars.get().into_iter().map(|url| {
-                                let url_clone = url.clone();
-                                let url_for_action = url.clone();
-                                view! {
-                                    <img src=url_clone class="w-16 h-16 rounded-full cursor-pointer hover:scale-110 transition-transform bg-white/5" on:click=move |_| {
-                                        update_avatar.dispatch(crate::app::UpdateAvatarUrl { new_avatar_url: url_for_action.clone() });
-                                        set_current_avatar.set(url_for_action.clone());
-                                        set_random_avatars.set(vec![]);
-                                    }/>
-                                }
-                            }).collect_view()}
+                            {move || {
+                                random_avatars
+                                    .get()
+                                    .into_iter()
+                                    .map(|url| {
+                                        let url_clone = url.clone();
+                                        let url_for_action = url.clone();
+                                        view! {
+                                            <img
+                                                src=url_clone
+                                                class="w-16 h-16 rounded-full cursor-pointer hover:scale-110 transition-transform bg-white/5"
+                                                on:click=move |_| {
+                                                    update_avatar
+                                                        .dispatch(crate::app::UpdateAvatarUrl {
+                                                            new_avatar_url: url_for_action.clone(),
+                                                        });
+                                                    set_current_avatar.set(url_for_action.clone());
+                                                    set_random_avatars.set(vec![]);
+                                                }
+                                            />
+                                        }
+                                    })
+                                    .collect_view()
+                            }}
                         </div>
                     </div>
                 </Show>
-                
+
                 <Show when=move || is_cropping.get()>
                     <div class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
                         <div class="bg-surface-container p-6 rounded-2xl max-w-2xl w-full flex flex-col gap-4">
                             <h3 class="text-title-lg font-bold">"Crop Avatar"</h3>
                             <div class="w-full h-[500px] bg-black rounded overflow-hidden flex items-center justify-center">
-                                {move || selected_data_url.get().map(|url| view! {
-                                    <img id="avatar-crop-img" src=url class="max-w-full max-h-full block" />
-                                })}
+                                {move || {
+                                    selected_data_url
+                                        .get()
+                                        .map(|url| {
+                                            view! {
+                                                <img
+                                                    id="avatar-crop-img"
+                                                    src=url
+                                                    class="max-w-full max-h-full block"
+                                                />
+                                            }
+                                        })
+                                }}
                             </div>
-                            <div data-testid="avatar-upload-status" class="text-sm text-primary">{move || upload_status.get()}</div>
+                            <div data-testid="avatar-upload-status" class="text-sm text-primary">
+                                {move || upload_status.get()}
+                            </div>
                             <div class="flex justify-end gap-2">
-                                <button class="px-4 py-2 bg-surface-variant rounded-xl font-bold" on:click=move |_| set_is_cropping.set(false)>"Cancel"</button>
-                                <button data-testid="save-avatar-button" class="px-4 py-2 bg-primary text-on-primary rounded-xl font-bold" on:click=on_crop_save>"Save Avatar"</button>
+                                <button
+                                    class="px-4 py-2 bg-surface-variant rounded-xl font-bold"
+                                    on:click=move |_| set_is_cropping.set(false)
+                                >
+                                    "Cancel"
+                                </button>
+                                <button
+                                    data-testid="save-avatar-button"
+                                    class="px-4 py-2 bg-primary text-on-primary rounded-xl font-bold"
+                                    on:click=on_crop_save
+                                >
+                                    "Save Avatar"
+                                </button>
                             </div>
                         </div>
                     </div>

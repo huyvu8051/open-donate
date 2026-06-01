@@ -1,32 +1,25 @@
 import { test, expect } from '@playwright/test';
 import { faker } from '@faker-js/faker';
 import { DashboardPage } from '../pages/DashboardPage';
+import { RegisterPage } from '../pages/RegisterPage';
 
 test.describe('Dashboard Controls & Interactivity E2E', () => {
   test('Should allow toggle pause, toggle sound, copy overlay link, and mark transactions as viewed', async ({ page }) => {
     test.setTimeout(45000);
     const dashboardPage = new DashboardPage(page);
+    const registerPage = new RegisterPage(page);
 
     // ==========================================
     // 1. Streamer Registers & Logs In directly via App
     // ==========================================
     console.log('Navigating to app register endpoint...');
-    await page.goto('/register');
 
     const fakeEmail = faker.internet.email();
     console.log(`Registering new user: ${fakeEmail}`);
 
-    await page.fill('input[name="email"]', fakeEmail);
-
-    const password = '@Aa123456';
-    await page.fill('input[name="password"]', password);
-    await page.fill('input[name="password_confirm"]', password);
-    await page.click('button[type="submit"]');
-
-    console.log('Waiting for redirect back to app dashboard...');
-    await page.waitForURL(/\/dashboard/, { timeout: 15000 });
-
+    await registerPage.register(fakeEmail);
     await dashboardPage.waitForDashboard();
+    console.log('Redirected to app dashboard!');
 
     // ==========================================
     // 2. Toggle Pause and Sound

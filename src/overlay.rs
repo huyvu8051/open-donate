@@ -218,65 +218,103 @@ pub fn OverlayPage() -> impl IntoView {
     view! {
         <style>"body { background: transparent !important; }"</style>
         <audio id="audio-silence" src="/audio/silence.wav" preload="auto"></audio>
-        <audio id="audio-donate" src=current_audio_src preload="auto" on:error=move |_| {
-            let level = fallback_level.get();
-            if level < 2 {
-                fallback_level.set(level + 1);
+        <audio
+            id="audio-donate"
+            src=current_audio_src
+            preload="auto"
+            on:error=move |_| {
+                let level = fallback_level.get();
+                if level < 2 {
+                    fallback_level.set(level + 1);
+                }
             }
-        }></audio>
+        ></audio>
         <main class="fixed inset-0 w-screen h-screen bg-transparent overflow-hidden pointer-events-none flex flex-col items-center justify-center">
             {move || {
                 if is_revoked.get() {
                     return view! {
                         <div class="pointer-events-auto bg-error/90 backdrop-blur-md border border-error/50 rounded-2xl p-xl shadow-2xl max-w-lg text-center animate-fade-in">
-                            <span class="material-symbols-outlined text-on-error text-[64px] mb-md">"warning"</span>
-                            <h1 class="text-headline-lg font-headline-lg text-on-error mb-sm">"Session Revoked"</h1>
-                            <p class="text-body-lg text-on-error/80">"This overlay session was revoked because the overlay link was opened in another location."</p>
+                            <span class="material-symbols-outlined text-on-error text-[64px] mb-md">
+                                "warning"
+                            </span>
+                            <h1 class="text-headline-lg font-headline-lg text-on-error mb-sm">
+                                "Session Revoked"
+                            </h1>
+                            <p class="text-body-lg text-on-error/80">
+                                "This overlay session was revoked because the overlay link was opened in another location."
+                            </p>
                         </div>
-                    }.into_any();
+                    }
+                        .into_any();
                 }
-
                 if interaction_required.get() {
-                    return view! {
-                        <div class="pointer-events-auto absolute inset-0 bg-black/80 z-50 flex items-center justify-center backdrop-blur-sm cursor-pointer" on:click=unlock_audio>
-                            <div class="bg-surface/95 border border-white/20 rounded-[2rem] p-16 shadow-[0_0_80px_rgba(0,0,0,0.8)] max-w-4xl text-center animate-fade-in flex flex-col items-center">
-                                <span class="material-symbols-outlined text-primary text-[120px] mb-8 animate-pulse drop-shadow-2xl">"volume_up"</span>
-                                <h1 class="text-6xl font-extrabold text-white mb-6 drop-shadow-lg tracking-tight">"Click to enable Audio"</h1>
-                                <p class="text-3xl text-white/80 leading-relaxed max-w-2xl">"Browsers require you to interact with the page before playing sound. Click anywhere to start!"</p>
-                            </div>
-                        </div>
-                    }.into_any();
-                }
-
-                current.get().map(|tx| {
-                    let msg = tx.message.clone();
+                    return 
                     view! {
-                        <div class="absolute inset-0 flex items-center justify-center p-8">
-                            <div class="max-w-4xl w-full bg-black/60 backdrop-blur-md border border-white/10 rounded-3xl px-10 py-8 shadow-[0_0_80px_rgba(0,0,0,0.55)] animate-fade-in">
-                                <div class="flex items-center justify-between gap-6">
-                                    <div class="flex flex-col gap-1">
-                                        <div data-testid="mock-donor-name" class="text-white text-4xl font-bold leading-tight">
-                                            {tx.donor_name}
-                                        </div>
-                                        <div class="text-white/80 text-lg">
-                                            "sent a Glint"
-                                        </div>
-                                    </div>
-                                    <div data-testid="mock-amount" class="text-secondary text-5xl font-extrabold">
-                                        "$" {format!("{:.2}", tx.amount)}
-                                    </div>
-                                </div>
-                                {move || {
-                                    msg.clone().map(|m| view! {
-                                        <div data-testid="mock-message" class="mt-6 text-white/90 text-2xl italic break-words">
-                                            "\"" {m} "\""
-                                        </div>
-                                    })
-                                }}
+                        <div
+                            class="pointer-events-auto absolute inset-0 bg-black/80 z-50 flex items-center justify-center backdrop-blur-sm cursor-pointer"
+                            on:click=unlock_audio
+                        >
+                            <div class="bg-surface/95 border border-white/20 rounded-[2rem] p-16 shadow-[0_0_80px_rgba(0,0,0,0.8)] max-w-4xl text-center animate-fade-in flex flex-col items-center">
+                                <span class="material-symbols-outlined text-primary text-[120px] mb-8 animate-pulse drop-shadow-2xl">
+                                    "volume_up"
+                                </span>
+                                <h1 class="text-6xl font-extrabold text-white mb-6 drop-shadow-lg tracking-tight">
+                                    "Click to enable Audio"
+                                </h1>
+                                <p class="text-3xl text-white/80 leading-relaxed max-w-2xl">
+                                    "Browsers require you to interact with the page before playing sound. Click anywhere to start!"
+                                </p>
                             </div>
                         </div>
                     }
-                }).into_any()
+                        .into_any();
+                }
+                current
+                    .get()
+                    .map(|tx| {
+                        let msg = tx.message.clone();
+
+                        view! {
+                            <div class="absolute inset-0 flex items-center justify-center p-8">
+                                <div class="max-w-4xl w-full bg-black/60 backdrop-blur-md border border-white/10 rounded-3xl px-10 py-8 shadow-[0_0_80px_rgba(0,0,0,0.55)] animate-fade-in">
+                                    <div class="flex items-center justify-between gap-6">
+                                        <div class="flex flex-col gap-1">
+                                            <div
+                                                data-testid="mock-donor-name"
+                                                class="text-white text-4xl font-bold leading-tight"
+                                            >
+                                                {tx.donor_name}
+                                            </div>
+                                            <div class="text-white/80 text-lg">"sent a Glint"</div>
+                                        </div>
+                                        <div
+                                            data-testid="mock-amount"
+                                            class="text-secondary text-5xl font-extrabold"
+                                        >
+                                            "$"
+                                            {format!("{:.2}", tx.amount)}
+                                        </div>
+                                    </div>
+                                    {move || {
+                                        msg.clone()
+                                            .map(|m| {
+                                                view! {
+                                                    <div
+                                                        data-testid="mock-message"
+                                                        class="mt-6 text-white/90 text-2xl italic break-words"
+                                                    >
+                                                        "\""
+                                                        {m}
+                                                        "\""
+                                                    </div>
+                                                }
+                                            })
+                                    }}
+                                </div>
+                            </div>
+                        }
+                    })
+                    .into_any()
             }}
         </main>
     }

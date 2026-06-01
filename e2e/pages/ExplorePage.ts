@@ -11,6 +11,7 @@ export class ExplorePage {
 
   async goto() {
     await this.page.goto('/explore');
+    await this.page.waitForTimeout(2000);
   }
 
   async verifyLoaded() {

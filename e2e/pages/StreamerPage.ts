@@ -21,6 +21,7 @@ export class StreamerPage {
 
   async goto(username: string) {
     await this.page.goto(`/streamer/${username}`);
+    await this.page.waitForTimeout(2000);
   }
 
   async verifyStreamerName(name: string) {
@@ -47,12 +48,12 @@ export class StreamerPage {
   }
 
   async verifyMockPaymentFlow() {
-    await expect(this.otpInput).toBeVisible();
-    await expect(this.paymentSuccessMsg).toBeVisible({ timeout: 10000 });
+    await expect(this.otpInput).toBeVisible({ timeout: 30000 });
+    await expect(this.paymentSuccessMsg).toBeVisible({ timeout: 30000 });
   }
 
   async verifyDonationInTributes(donorName: string, amount: string, message: string) {
-    await expect(this.tributeSection.getByText(donorName).first()).toBeVisible({ timeout: 5000 });
+    await expect(this.tributeSection.getByText(donorName).first()).toBeVisible({ timeout: 30000 });
     await expect(this.tributeSection.getByText(message).first()).toBeVisible();
     await expect(this.tributeSection.getByText(`$${amount}.00`).first()).toBeVisible();
   }

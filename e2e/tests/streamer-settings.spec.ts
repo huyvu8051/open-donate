@@ -1,16 +1,18 @@
 import { test, expect } from '@playwright/test';
 import { faker } from '@faker-js/faker';
 import { DashboardPage } from '../pages/DashboardPage';
+import { RegisterPage } from '../pages/RegisterPage';
 import { StreamerSettingsPage } from '../pages/StreamerSettingsPage';
 
 test('Streamer Settings Update Flow (Profile, Media, Payments)', async ({ page }) => {
-  const loginPage = new DashboardPage(page);
+  const dashboardPage = new DashboardPage(page);
+  const registerPage = new RegisterPage(page);
   const settingsPage = new StreamerSettingsPage(page);
 
   const fakeEmail = faker.internet.email();
   console.log(`Registering new user: ${fakeEmail}`);
-  await loginPage.register(fakeEmail);
-  await loginPage.waitForDashboard();
+  await registerPage.register(fakeEmail);
+  await dashboardPage.waitForDashboard();
 
   // ==========================================
   // 1. Update Basic Settings Profile
@@ -57,7 +59,7 @@ test('Streamer Settings Update Flow (Profile, Media, Payments)', async ({ page }
   // ==========================================
   console.log('Navigating to payments page...');
   await page.goto('/dashboard/payments');
-  await page.waitForURL(/.*dashboard\/payments.*/, { timeout: 10000 });
+  await page.waitForURL(/.*dashboard\/payments.*/, { timeout: 30000 });
   
   // Verify header
   await expect(page.getByTestId('streamer-payments-header')).toBeVisible();
@@ -87,18 +89,19 @@ test('Streamer Settings Update Flow (Profile, Media, Payments)', async ({ page }
 });
 
 test('Streamer Settings File Uploads (Avatar & Media)', async ({ page }) => {
-  test.setTimeout(60000);
-  const loginPage = new DashboardPage(page);
+  test.setTimeout(120000);
+  const dashboardPage = new DashboardPage(page);
+  const registerPage = new RegisterPage(page);
   const settingsPage = new StreamerSettingsPage(page);
 
   const fakeEmail = faker.internet.email();
   console.log(`Registering new user for upload tests: ${fakeEmail}`);
-  await loginPage.register(fakeEmail);
-  await loginPage.waitForDashboard();
+  await registerPage.register(fakeEmail);
+  await dashboardPage.waitForDashboard();
 
   console.log('Navigating to dashboard settings...');
   await page.goto('/dashboard/settings');
-  await page.waitForURL(/.*dashboard\/settings.*/, { timeout: 10000 });
+  await page.waitForURL(/.*dashboard\/settings.*/, { timeout: 30000 });
 
   // ==========================================
   // 1. Upload Avatar

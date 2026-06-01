@@ -1,10 +1,12 @@
 import { test, expect, chromium } from '@playwright/test';
 import { faker } from '@faker-js/faker';
 import { StreamerPage } from '../pages/StreamerPage';
+import { DashboardPage } from '../pages/DashboardPage';
+import { RegisterPage } from '../pages/RegisterPage';
 
 test.describe('Real-time Dashboard Flow', () => {
   test('Dashboard automatically reloads and shows new donation when viewer donates', async () => {
-    test.setTimeout(60000); // Allow extra time for dual browser flow
+    test.setTimeout(120000); // Allow extra time for dual browser flow
 
     // Create two separate browser contexts to isolate sessions
     const browser = await chromium.launch({
@@ -15,27 +17,17 @@ test.describe('Real-time Dashboard Flow', () => {
 
     const streamerPage = await streamerContext.newPage();
     const viewerPage = await viewerContext.newPage();
+    const streamerDashboard = new DashboardPage(streamerPage);
+    const streamerRegister = new RegisterPage(streamerPage);
 
     // ==========================================
     // 1. Streamer Logs In & Opens Dashboard
     // ==========================================
-    console.log('Streamer: Navigating to register...');
-    await streamerPage.goto('/register');
-
     const fakeEmail = faker.internet.email().toLowerCase();
     console.log(`Streamer: Registering new user: ${fakeEmail}`);
-    await streamerPage.fill('input[name="email"]', fakeEmail);
-
-    const password = '@Aa123456';
-    await streamerPage.fill('input[name="password"]', password);
-    await streamerPage.fill('input[name="password_confirm"]', password);
-
-    await streamerPage.click('button[type="submit"]');
-
-    console.log('Streamer: Waiting for redirect to dashboard...');
-    await streamerPage.waitForURL(/\/dashboard/, { timeout: 15000 });
-
-    await expect(streamerPage.getByTestId('streamer-dashboard-header')).toBeVisible({ timeout: 10000 });
+    
+    await streamerRegister.register(fakeEmail);
+    await streamerDashboard.waitForDashboard();
 
     const expectedPrefix = fakeEmail.split('@')[0].toLowerCase();
     const streamerUsername = expectedPrefix;

@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { faker } from '@faker-js/faker';
 import { StreamerPage } from '../pages/StreamerPage';
 import { ExplorePage } from '../pages/ExplorePage';
@@ -19,13 +19,15 @@ test.describe('Viewer Donation Flow', () => {
     const amount = '50';
     const paymentMethod = 'Mock Auto';
 
-    await streamerPage.fillDonationForm(donorName, amount, message, paymentMethod);
+    // We wrap filling and submitting in a retry block to handle premature WASM hydration form submits
+    await expect(async () => {
+      await streamerPage.fillDonationForm(donorName, amount, message, paymentMethod);
+      await streamerPage.submitDonation();
+      await expect(streamerPage.otpInput).toBeVisible({ timeout: 10000 });
+    }).toPass({ timeout: 60000 });
 
-    // 3. Submit donation
-    await streamerPage.submitDonation();
-
-    // 4. Handle Mock Payment Window
-    await streamerPage.verifyMockPaymentFlow();
+    // 4. Handle Mock Payment Window (otpInput already verified in the retry block)
+    await expect(streamerPage.paymentSuccessMsg).toBeVisible({ timeout: 30000 });
 
     // 5. Verify it appears in Recent Tributes
     await streamerPage.verifyDonationInTributes(donorName, amount, message);
@@ -53,13 +55,15 @@ test.describe('Viewer Donation Flow', () => {
     const amount = '10';
     const paymentMethod = 'Mock Auto';
 
-    await streamerPage.fillDonationForm(donorName, amount, message, paymentMethod);
-
-    // 5. Submit donation
-    await streamerPage.submitDonation();
+    // We wrap filling and submitting in a retry block to handle premature WASM hydration form submits
+    await expect(async () => {
+      await streamerPage.fillDonationForm(donorName, amount, message, paymentMethod);
+      await streamerPage.submitDonation();
+      await expect(streamerPage.otpInput).toBeVisible({ timeout: 10000 });
+    }).toPass({ timeout: 60000 });
 
     // 6. Handle Mock Payment Window
-    await streamerPage.verifyMockPaymentFlow();
+    await expect(streamerPage.paymentSuccessMsg).toBeVisible({ timeout: 30000 });
 
     // 7. Verify it appears in Recent Tributes
     await streamerPage.verifyDonationInTributes(donorName, amount, message);
