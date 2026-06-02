@@ -36,7 +36,7 @@ pub fn LeaderboardPage() -> impl IntoView {
 
                 <Suspense fallback=move || {
                     view! {
-                        <div class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden animate-pulse mt-xl">
+                        <div class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden animate-pulse">
                             <div class="grid grid-cols-12 gap-2 px-5 py-4 text-on-surface-variant text-label-sm font-label-sm border-b border-white/10">
                                 <div class="col-span-1">"#"</div>
                                 <div class="col-span-6">"Creator"</div>

@@ -42,6 +42,7 @@ pub fn StreamerPage() -> impl IntoView {
     let payment_method = RwSignal::new(PaymentMethod::CreditCard);
     let transactions_trigger = RwSignal::new(0);
     let form_error = RwSignal::new(None::<String>);
+    let bio_expanded = RwSignal::new(false);
 
     let show_payment_window = RwSignal::new(false);
     let otp = RwSignal::new("".to_string());
@@ -205,7 +206,10 @@ pub fn StreamerPage() -> impl IntoView {
                         <div class="w-24 h-24 md:w-28 md:h-28 rounded-2xl bg-white/5 border border-white/10"></div>
                         <div class="flex-1 flex flex-col gap-xs text-center md:text-left">
                             <div class="h-8 w-48 bg-white/5 rounded mx-auto md:mx-0"></div>
-                            <div class="h-4 w-full bg-white/5 rounded mt-sm"></div>
+                            <div class="flex flex-col gap-2 mt-xs min-h-[3rem]">
+                                <div class="h-4 w-full bg-white/5 rounded"></div>
+                                <div class="h-4 w-5/6 bg-white/5 rounded mx-auto md:mx-0"></div>
+                            </div>
                         </div>
                     </section>
                 }
@@ -252,28 +256,32 @@ pub fn StreamerPage() -> impl IntoView {
                                                             .into_any()
                                                     }}
                                                 </div>
-                                                <p class="text-on-surface-variant text-body-sm md:text-body-md font-body-md leading-snug max-w-prose mx-auto md:mx-0">
-                                                    {bio}
-                                                </p>
-                                                <div class="flex items-center justify-center md:justify-start gap-sm text-label-sm text-on-surface-variant/90">
-                                                    <span class="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-sm py-xs">
-                                                        <span class="material-symbols-outlined text-primary text-[18px]">
-                                                            "bolt"
-                                                        </span>
-                                                        "Fast"
-                                                    </span>
-                                                    <span class="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-sm py-xs">
-                                                        <span class="material-symbols-outlined text-primary text-[18px]">
-                                                            "lock"
-                                                        </span>
-                                                        "Secure"
-                                                    </span>
-                                                    <span class="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-sm py-xs">
-                                                        <span class="material-symbols-outlined text-primary text-[18px]">
-                                                            "favorite"
-                                                        </span>
-                                                        "Support"
-                                                    </span>
+                                                <div class="mt-xs">
+                                                    {if bio.len() > 100 {
+                                                        view! {
+                                                            <div class="flex flex-col gap-1 items-center md:items-start">
+                                                                <p class=move || if bio_expanded.get() {
+                                                                    "text-on-surface-variant text-body-sm md:text-body-md font-body-md leading-snug max-w-prose mx-auto md:mx-0 min-h-[3rem]".to_string()
+                                                                } else {
+                                                                    "text-on-surface-variant text-body-sm md:text-body-md font-body-md leading-snug max-w-prose mx-auto md:mx-0 line-clamp-2 min-h-[3rem]".to_string()
+                                                                }>
+                                                                    {bio.clone()}
+                                                                </p>
+                                                                <button
+                                                                    class="text-primary text-label-sm font-bold hover:underline"
+                                                                    on:click=move |_| bio_expanded.update(|b| *b = !*b)
+                                                                >
+                                                                    {move || if bio_expanded.get() { "Show less" } else { "Read more" }}
+                                                                </button>
+                                                            </div>
+                                                        }.into_any()
+                                                    } else {
+                                                        view! {
+                                                            <p class="text-on-surface-variant text-body-sm md:text-body-md font-body-md leading-snug max-w-prose mx-auto md:mx-0 line-clamp-2 min-h-[3rem]">
+                                                                {bio.clone()}
+                                                            </p>
+                                                        }.into_any()
+                                                    }}
                                                 </div>
                                             </div>
                                         </section>
@@ -293,9 +301,9 @@ pub fn StreamerPage() -> impl IntoView {
                 }}
             </Suspense>
 
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-md items-start relative z-10">
+            <div class="flex flex-col gap-md relative z-10">
                 // Donation Form
-                <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-md md:p-lg flex flex-col gap-md md:col-span-3 shadow-[0_20px_60px_rgba(0,0,0,0.25)] ring-1 ring-white/5">
+                <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-md md:p-lg flex flex-col gap-md shadow-[0_20px_60px_rgba(0,0,0,0.25)] ring-1 ring-white/5">
                     <div class="flex items-center gap-sm">
                         <span
                             class="material-symbols-outlined text-secondary"
@@ -610,7 +618,7 @@ pub fn StreamerPage() -> impl IntoView {
                 // Recent Tributes Section
                 <section
                     data-testid="recent-tributes-section"
-                    class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-md md:p-lg flex flex-col gap-md md:col-span-2 md:sticky md:top-28 shadow-[0_20px_60px_rgba(0,0,0,0.25)] ring-1 ring-white/5"
+                    class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-md md:p-lg flex flex-col gap-md shadow-[0_20px_60px_rgba(0,0,0,0.25)] ring-1 ring-white/5"
                 >
                     <div class="flex items-center gap-sm">
                         <span class="material-symbols-outlined text-primary" data-icon="history">
