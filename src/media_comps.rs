@@ -1,16 +1,15 @@
 #[component]
 pub fn S3StatusBanner() -> impl IntoView {
-    let s3_status_resource = Resource::new(
-        || (),
-        |_| async move { crate::utils::with_min_delay(crate::app::check_s3_status()).await.unwrap_or(false) }
-    );
+    let status_resource = use_context::<Resource<crate::app::SystemStatus>>()
+        .expect("SystemStatus context missing");
     
     view! {
         <Suspense fallback=|| ()>
             {move || {
-                s3_status_resource
+                status_resource
                     .get()
-                    .map(|is_up| {
+                    .map(|status| {
+                        let is_up = status.s3_up;
                         if !is_up {
                             view! {
                                 <div class="bg-error/20 border border-error/50 text-error px-4 py-3 rounded-xl mb-6 flex items-center gap-3 shadow-lg shadow-error/10">

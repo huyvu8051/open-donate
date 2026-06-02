@@ -80,6 +80,7 @@ pub fn App() -> impl IntoView {
 
     view! {
         <I18nProvider>
+            <SystemStatusPoller />
             <Stylesheet id="leptos" href="/pkg/open-donate.css" />
             <Title text="Glint | Empower Your Content" />
 
@@ -121,6 +122,83 @@ pub fn App() -> impl IntoView {
             </Router>
         </I18nProvider>
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct SystemStatus {
+    pub s3_up: bool,
+    pub overlay_up: bool,
+}
+
+#[server(GetSystemStatus, "/api")]
+pub async fn get_system_status() -> Result<SystemStatus, ServerFnError> {
+    let user = match get_me().await {
+        Ok(Some(u)) => u,
+        _ => return Err(ServerFnError::new("Unauthorized")),
+    };
+
+    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
+        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
+
+    let _ = sqlx::query("UPDATE streamers SET last_online_ping = CURRENT_TIMESTAMP WHERE user_id = $1")
+        .bind(&user.id)
+        .execute(&pool)
+        .await;
+
+    let row = sqlx::query(
+        "SELECT last_online_ping FROM streamers WHERE user_id = $1"
+    )
+    .bind(&user.id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(|e| ServerFnError::new(format!("Database error: {}", e)))?;
+
+    use sqlx::Row;
+    let overlay_up = if let Some(r) = row {
+        if let Ok(ping) = r.try_get::<chrono::DateTime<chrono::Utc>, _>("last_online_ping") {
+            let now = chrono::Utc::now();
+            now.signed_duration_since(ping).num_seconds() <= 300
+        } else { false }
+    } else { false };
+
+    let s3_up = check_s3_status().await.unwrap_or(false);
+
+    Ok(SystemStatus { s3_up, overlay_up })
+}
+
+#[component]
+pub fn SystemStatusPoller() -> impl IntoView {
+    let user_resource = use_context::<Resource<Result<Option<User>, ServerFnError>>>()
+        .expect("user_resource context missing");
+    let tick = RwSignal::new(0);
+
+    #[cfg(feature = "hydrate")]
+    {
+        use gloo_timers::callback::Interval;
+        let poll_interval: leptos::prelude::StoredValue<Option<Interval>, leptos::prelude::LocalStorage> = leptos::prelude::StoredValue::new_local(None);
+        
+        Effect::new(move || {
+            if let Some(Ok(Some(_))) = user_resource.get() {
+                if poll_interval.with_value(|i| i.is_none()) {
+                    let interval = Interval::new(5000, move || {
+                        tick.update(|t| *t += 1);
+                    });
+                    poll_interval.set_value(Some(interval));
+                }
+            } else {
+                poll_interval.update_value(|i| { *i = None; });
+            }
+        });
+    }
+
+    let status_resource = Resource::new(
+        move || tick.get(),
+        |_| async move { crate::utils::with_min_delay(get_system_status()).await.unwrap_or(SystemStatus { s3_up: false, overlay_up: false }) }
+    );
+    
+    provide_context(status_resource);
+
+    view! {}
 }
 
 
@@ -569,7 +647,7 @@ pub async fn prefetch_upcoming_transactions(token: String, session_id: String) -
     let primary_media_url: Option<String> = streamer.try_get("file_url").unwrap_or(None);
     let fallback_media_file: String = streamer.try_get("fallback_media_file").unwrap_or_else(|_| "/default_donate.mp3".to_string());
 
-    let _ = sqlx::query("UPDATE streamers SET last_overlay_ping = CURRENT_TIMESTAMP WHERE id = $1")
+    let _ = sqlx::query("UPDATE streamers SET last_online_ping = CURRENT_TIMESTAMP WHERE id = $1")
         .bind(streamer_id)
         .execute(&pool)
         .await;
@@ -642,38 +720,6 @@ pub async fn lock_transaction(token: String, session_id: String, tx_id: i32) -> 
 
     // If rows_affected > 0, we successfully locked it
     Ok(res.rows_affected() > 0)
-}
-
-
-#[server(GetOverlayStatus, "/api")]
-pub async fn get_overlay_status() -> Result<bool, ServerFnError> {
-    let user = match get_me().await {
-        Ok(Some(u)) => u,
-        _ => return Err(ServerFnError::new("Unauthorized")),
-    };
-
-    let axum::Extension(pool) = leptos_axum::extract::<axum::Extension<sqlx::PgPool>>().await
-        .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
-
-    let row = sqlx::query(
-        "SELECT last_overlay_ping FROM streamers WHERE user_id = $1"
-    )
-    .bind(user.id)
-    .fetch_optional(&pool)
-    .await
-    .map_err(|e| ServerFnError::new(format!("Database error: {}", e)))?;
-
-    use sqlx::Row;
-    if let Some(r) = row {
-        if let Ok(ping) = r.try_get::<chrono::DateTime<chrono::Utc>, _>("last_overlay_ping") {
-            let now = chrono::Utc::now();
-            if now.signed_duration_since(ping).num_seconds() <= 10 {
-                return Ok(true);
-            }
-        }
-    }
-    
-    Ok(false)
 }
 
 #[server(TestOverlayDonation, "/api")]

@@ -265,21 +265,10 @@ pub fn DashboardHome() -> impl IntoView {
         }
     };
 
-    // Overlay Status polling
-    let tick = RwSignal::new(0);
-    #[cfg(feature = "hydrate")]
-    {
-        use gloo_timers::callback::Interval;
-        let poll_interval: StoredValue<Option<Interval>, leptos::prelude::LocalStorage> = StoredValue::new_local(None);
-        let interval = Interval::new(5000, move || {
-            tick.update(|t| *t += 1);
-        });
-        poll_interval.set_value(Some(interval));
-    }
-    
-    let status_resource = Resource::new(move || tick.get(), |_| async move {
-        crate::utils::with_min_delay(crate::app::get_overlay_status()).await.unwrap_or(false)
-    });
+    // Global System Status polling
+    let status_resource = use_context::<Resource<crate::app::SystemStatus>>()
+        .expect("SystemStatus context missing");
+
 
     let test_action = ServerAction::<crate::app::TestOverlayDonation>::new();
     let pause_action = ServerAction::<crate::app::ToggleOverlayPause>::new();
@@ -312,7 +301,7 @@ pub fn DashboardHome() -> impl IntoView {
                         }
                     }>
                         {move || {
-                            let is_active = status_resource.get().unwrap_or(false);
+                            let is_active = status_resource.get().map(|s| s.overlay_up).unwrap_or(false);
                             if is_active {
                                 view! {
                                     <div
@@ -1067,17 +1056,16 @@ pub use crate::analytics::AnalyticsPage;
 
 #[component]
 pub fn S3StatusBanner() -> impl IntoView {
-    let s3_status_resource = Resource::new(
-        || (),
-        |_| async move { crate::utils::with_min_delay(crate::app::check_s3_status()).await.unwrap_or(false) }
-    );
+    let status_resource = use_context::<Resource<crate::app::SystemStatus>>()
+        .expect("SystemStatus context missing");
     
     view! {
         <Suspense fallback=|| ()>
             {move || {
-                s3_status_resource
+                status_resource
                     .get()
-                    .map(|is_up| {
+                    .map(|status| {
+                        let is_up = status.s3_up;
                         if !is_up {
                             view! {
                                 <div class="bg-error/20 border border-error/50 text-error px-4 py-3 rounded-xl mb-6 flex items-center gap-3 shadow-lg shadow-error/10">

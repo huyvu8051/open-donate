@@ -227,34 +227,29 @@ pub fn StreamerPage() -> impl IntoView {
                                     view! {
                                         <section class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-md mb-md relative overflow-hidden flex flex-col md:flex-row gap-md items-center md:items-center shadow-[0_20px_60px_rgba(0,0,0,0.25)] ring-1 ring-white/5">
                                             <div class="absolute inset-0 opacity-70 bg-gradient-to-br from-white/12 via-transparent to-transparent"></div>
-                                            <div class="relative w-24 h-24 md:w-28 md:h-28 rounded-2xl overflow-hidden border border-white/15 shadow-[0_0_0_6px_rgba(255,255,255,0.03)]">
-                                                <img
-                                                    alt="Streamer Avatar"
-                                                    class="w-full h-full object-cover"
-                                                    src=avatar
-                                                />
+                                            <div class="relative w-24 h-24 md:w-28 md:h-28 shrink-0">
+                                                <div class="w-full h-full rounded-2xl overflow-hidden border border-white/15 shadow-[0_0_0_6px_rgba(255,255,255,0.03)]">
+                                                    <img
+                                                        alt="Streamer Avatar"
+                                                        class="w-full h-full object-cover"
+                                                        src=avatar
+                                                    />
+                                                </div>
+                                                {if is_live {
+                                                    view! {
+                                                        <div class="absolute -bottom-1 -right-1 z-20 bg-error text-on-error text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-surface animate-pulse shadow-lg">
+                                                            "LIVE"
+                                                        </div>
+                                                    }.into_any()
+                                                } else {
+                                                    view! {}.into_any()
+                                                }}
                                             </div>
                                             <div class="flex-1 flex flex-col gap-xs text-center md:text-left relative z-10">
                                                 <div class="flex items-center justify-center md:justify-start gap-sm">
                                                     <h1 class="text-headline-md md:text-headline-lg font-headline-lg text-on-surface">
                                                         {name}
                                                     </h1>
-                                                    {if is_live {
-                                                        view! {
-                                                            <span class="bg-secondary/10 text-secondary border border-secondary/20 px-sm py-xs rounded-full text-label-sm font-label-sm flex items-center gap-xs">
-                                                                <span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
-                                                                "LIVE"
-                                                            </span>
-                                                        }
-                                                            .into_any()
-                                                    } else {
-                                                        view! {
-                                                            <span class="bg-white/10 text-on-surface-variant border border-white/15 px-sm py-xs rounded-full text-label-sm font-label-sm flex items-center gap-xs">
-                                                                "OFFLINE"
-                                                            </span>
-                                                        }
-                                                            .into_any()
-                                                    }}
                                                 </div>
                                                 <div class="mt-xs">
                                                     {if bio.len() > 100 {
@@ -726,7 +721,7 @@ pub async fn get_streamer(username: String) -> Result<Option<DbStreamer>, Server
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let row = sqlx::query(
-        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods, overlay_paused, overlay_sound_enabled, selected_media_id, fallback_media_file FROM streamers WHERE username = $1"
+        "SELECT id, username, display_name, avatar_url, bio, (last_online_ping IS NOT NULL AND last_online_ping >= NOW() - INTERVAL '300 seconds') AS is_live, user_id, overlay_token, active_overlay_session, payment_methods, overlay_paused, overlay_sound_enabled, selected_media_id, fallback_media_file FROM streamers WHERE username = $1"
     )
     .bind(username)
     .fetch_optional(&pool)

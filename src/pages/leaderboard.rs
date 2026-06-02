@@ -8,6 +8,7 @@ pub struct LeaderboardEntry {
     pub username: String,
     pub display_name: String,
     pub avatar_url: String,
+    pub is_live: bool,
     pub total_amount: f64,
     pub donation_count: i64,
 }
@@ -124,10 +125,21 @@ pub fn LeaderboardPage() -> impl IntoView {
                                                                         {rank}
                                                                     </div>
                                                                     <div class="col-span-6 flex items-center gap-3">
-                                                                        <img
-                                                                            src=avatar
-                                                                            class="w-10 h-10 rounded-full object-cover bg-surface-container-highest border border-white/10"
-                                                                        />
+                                                                        <div class="relative w-10 h-10 shrink-0">
+                                                                            <img
+                                                                                src=avatar
+                                                                                class="w-full h-full rounded-full object-cover bg-surface-container-highest border border-white/10"
+                                                                            />
+                                                                            {if e.is_live {
+                                                                                view! {
+                                                                                    <div class="absolute -bottom-0.5 -right-0.5 bg-error text-on-error text-[8px] font-bold px-1.5 py-0 rounded-full border border-surface animate-pulse">
+                                                                                        "LIVE"
+                                                                                    </div>
+                                                                                }.into_any()
+                                                                            } else {
+                                                                                view! {}.into_any()
+                                                                            }}
+                                                                        </div>
                                                                         <div class="flex flex-col">
                                                                             <div class="text-on-surface font-semibold">{name}</div>
                                                                             <div class="text-on-surface-variant text-label-sm">
@@ -178,6 +190,7 @@ pub async fn get_streamer_leaderboard() -> Result<Vec<LeaderboardEntry>, ServerF
             s.username,
             s.display_name,
             s.avatar_url,
+            (s.last_online_ping IS NOT NULL AND s.last_online_ping >= NOW() - INTERVAL '300 seconds') as is_live,
             COALESCE(SUM(t.amount), 0) as total_amount,
             COUNT(t.id) as donation_count
          FROM streamers s
@@ -199,7 +212,8 @@ pub async fn get_streamer_leaderboard() -> Result<Vec<LeaderboardEntry>, ServerF
             username: r.get("username"),
             display_name: r.get("display_name"),
             avatar_url: r.get("avatar_url"),
-            total_amount: r.get("total_amount"),
+            is_live: r.get("is_live"),
+            total_amount: r.try_get::<f64, _>("total_amount").unwrap_or(0.0),
             donation_count: r.get("donation_count"),
         })
         .collect())

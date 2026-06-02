@@ -162,7 +162,7 @@ pub async fn get_all_streamers() -> Result<Vec<DbStreamer>, ServerFnError> {
         .map_err(|e| ServerFnError::new(format!("Failed to extract DB pool: {:?}", e)))?;
 
     let rows = sqlx::query(
-        "SELECT id, username, display_name, avatar_url, bio, is_live, user_id, overlay_token, active_overlay_session, payment_methods, overlay_paused, overlay_sound_enabled, selected_media_id, fallback_media_file FROM streamers ORDER BY is_live DESC, id DESC"
+        "SELECT id, username, display_name, avatar_url, bio, (last_online_ping IS NOT NULL AND last_online_ping >= NOW() - INTERVAL '300 seconds') AS is_live, user_id, overlay_token, active_overlay_session, payment_methods, overlay_paused, overlay_sound_enabled, selected_media_id, fallback_media_file FROM streamers ORDER BY last_online_ping DESC NULLS LAST, id DESC"
     )
     .fetch_all(&pool)
     .await
