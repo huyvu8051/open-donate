@@ -49,8 +49,8 @@ COPY --from=planner /app/recipe.json recipe.json
 
 # Build dependencies - this is the caching Docker layer!
 # cargo-leptos builds two targets: WASM (frontend) and host (backend).
-RUN cargo chef cook --release --recipe-path recipe.json --bin open-donate --features "ssr"
-RUN cargo chef cook --release --recipe-path recipe.json --target wasm32-unknown-unknown --lib --features "hydrate"
+RUN cargo chef cook --release --recipe-path recipe.json --features "ssr"
+RUN cargo chef cook --release --recipe-path recipe.json --target wasm32-unknown-unknown --features "hydrate"
 
 # Now copy the actual source code
 COPY Cargo.toml Cargo.lock ./
