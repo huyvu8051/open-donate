@@ -118,7 +118,7 @@ pub fn LeaderboardPage() -> impl IntoView {
                                                             let rank = (idx + 1).to_string();
                                                             view! {
                                                                 <a
-                                                                    href=profile_url
+                                                                    href=move || format!("/{}/{}", expect_context::<leptos_fluent::I18n>().language.get().id.to_string(), profile_url.trim_start_matches('/'))
                                                                     class="grid grid-cols-12 gap-2 px-5 py-4 hover:bg-white/5 transition-colors items-center"
                                                                 >
                                                                     <div class="col-span-1 text-on-surface font-semibold">

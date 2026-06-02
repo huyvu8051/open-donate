@@ -196,3 +196,7 @@ cta-title = Sẵn sàng tham gia cách mạng?
 cta-subtitle = Hơn 150.000 nhà sáng tạo đang sử dụng Glint để xây dựng cộng đồng của họ.
 cta-donate-now = Donate Ngay
 cta-view-leaders = Xem Bảng Xếp Hạng
+
+header-explore = Khám phá
+header-creators = Sáng tạo
+header-leaderboard = Bảng xếp hạng

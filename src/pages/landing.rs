@@ -25,7 +25,7 @@ pub fn Hero() -> impl IntoView {
                         {leptos_fluent::move_tr!("landing-donate-now")}
                     </button>
                     <a
-                        href="/register"
+                        href=move || format!("/{}/register", expect_context::<leptos_fluent::I18n>().language.get().id.to_string())
                         class="px-lg py-md bg-surface-container-highest/40 backdrop-blur-md border border-white/20 text-on-surface rounded-xl font-headline-md text-headline-md hover:bg-surface-container-highest/60 transition-all inline-block text-center"
                     >
                         {leptos_fluent::move_tr!("landing-start-creating")}

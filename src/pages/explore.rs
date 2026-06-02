@@ -81,7 +81,8 @@ pub fn ExplorePage() -> impl IntoView {
                                                         view! {
                                                             <a
                                                                 data-testid="streamer-card"
-                                                                href=profile_url
+                                                                href=move || format!("/{}/{}", expect_context::<leptos_fluent::I18n>().language.get().id.to_string(), profile_url.trim_start_matches('/'))
+                                                                target="_blank"
                                                                 class="group flex flex-col gap-md bg-surface-container-low/40 backdrop-blur-md border border-white/10 rounded-2xl p-lg hover:border-primary/50 transition-all hover:transform hover:-translate-y-1"
                                                             >
                                                                 <div class="flex items-center gap-md">

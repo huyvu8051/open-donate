@@ -6,7 +6,7 @@ use leptos_router::hooks::{use_location, use_params_map};
 use leptos::prelude::*;
 use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
 use leptos_router::{
-    components::{ParentRoute, Route, Router, Routes},
+    components::{ParentRoute, Route, Router, Routes, Redirect, Outlet},
     ParamSegment, StaticSegment,
 };
 use crate::auth::User;
@@ -70,12 +70,41 @@ fn I18nProvider(children: Children) -> impl IntoView {
 }
 
 #[component]
+fn RedirectToLocale() -> impl IntoView {
+    view! { <Redirect path="/en" /> }
+}
+
+#[component]
+fn LocaleLayout() -> impl IntoView {
+    let params = leptos_router::hooks::use_params_map();
+    let i18n = expect_context::<leptos_fluent::I18n>();
+    
+    let lang_code = params.with_untracked(|p| p.get("lang").unwrap_or_else(|| "en".to_string()));
+    if i18n.language.get_untracked().id.to_string() != lang_code {
+        if let Some(l) = i18n.languages.iter().find(|l| l.id.to_string() == lang_code) {
+            i18n.language.set(l);
+        }
+    }
+
+    Effect::new(move |_| {
+        let lang_code = params.with(|p| p.get("lang").unwrap_or_else(|| "en".to_string()));
+        if i18n.language.get_untracked().id.to_string() != lang_code {
+            if let Some(l) = i18n.languages.iter().find(|l| l.id.to_string() == lang_code) {
+                i18n.language.set(l);
+            }
+        }
+    });
+
+    view! { <Outlet /> }
+}
+
+#[component]
 pub fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
 
     // Load current user
-    let user_resource = Resource::new(|| (), |_| async move { crate::utils::with_min_delay(get_me()).await });
+    let user_resource = Resource::new(|| (), |_| async move { get_me().await });
     provide_context(user_resource);
 
     view! {
@@ -86,38 +115,41 @@ pub fn App() -> impl IntoView {
 
             <Router>
                 <Routes fallback=|| "Page not found.".into_view()>
-                    <Route path=StaticSegment("") view=LandingPage />
-                    <Route path=StaticSegment("explore") view=ExplorePage />
-                    <Route path=StaticSegment("leaderboard") view=LeaderboardPage />
-                    <Route path=StaticSegment("about") view=crate::pages::AboutPage />
-                    <Route path=StaticSegment("faq") view=crate::pages::FaqPage />
-                    <Route path=StaticSegment("privacy") view=crate::pages::PrivacyPage />
-                    <Route path=StaticSegment("terms") view=crate::pages::TermsPage />
-                    <ParentRoute
-                        path=StaticSegment("dashboard")
-                        view=crate::dashboard::DashboardLayout
-                    >
-                        <Route path=StaticSegment("") view=crate::dashboard::DashboardHome />
-                        <Route path=StaticSegment("settings") view=crate::dashboard::SettingsPage />
-                        <Route path=StaticSegment("payments") view=crate::dashboard::PaymentsPage />
-                        <Route
-                            path=StaticSegment("analytics")
-                            view=crate::dashboard::AnalyticsPage
-                        />
-                    </ParentRoute>
-                    <Route path=StaticSegment("login") view=crate::pages::login::LoginPage />
-                    <Route
-                        path=StaticSegment("register")
-                        view=crate::pages::register::RegisterPage
-                    />
-                    <Route
-                        path=(StaticSegment("streamer"), ParamSegment("username"))
-                        view=StreamerPage
-                    />
+                    <Route path=StaticSegment("") view=RedirectToLocale />
                     <Route
                         path=(StaticSegment("overlay"), ParamSegment("token"))
                         view=crate::overlay::OverlayPage
                     />
+                    <ParentRoute path=ParamSegment("lang") view=LocaleLayout>
+                        <Route path=StaticSegment("") view=LandingPage />
+                        <Route path=StaticSegment("explore") view=ExplorePage />
+                        <Route path=StaticSegment("leaderboard") view=LeaderboardPage />
+                        <Route path=StaticSegment("about") view=crate::pages::AboutPage />
+                        <Route path=StaticSegment("faq") view=crate::pages::FaqPage />
+                        <Route path=StaticSegment("privacy") view=crate::pages::PrivacyPage />
+                        <Route path=StaticSegment("terms") view=crate::pages::TermsPage />
+                        <ParentRoute
+                            path=StaticSegment("dashboard")
+                            view=crate::dashboard::DashboardLayout
+                        >
+                            <Route path=StaticSegment("") view=crate::dashboard::DashboardHome />
+                            <Route path=StaticSegment("settings") view=crate::dashboard::SettingsPage />
+                            <Route path=StaticSegment("payments") view=crate::dashboard::PaymentsPage />
+                            <Route
+                                path=StaticSegment("analytics")
+                                view=crate::dashboard::AnalyticsPage
+                            />
+                        </ParentRoute>
+                        <Route path=StaticSegment("login") view=crate::pages::login::LoginPage />
+                        <Route
+                            path=StaticSegment("register")
+                            view=crate::pages::register::RegisterPage
+                        />
+                        <Route
+                            path=(StaticSegment("streamer"), ParamSegment("username"))
+                            view=StreamerPage
+                        />
+                    </ParentRoute>
                 </Routes>
             </Router>
         </I18nProvider>
@@ -146,7 +178,7 @@ pub async fn get_system_status() -> Result<SystemStatus, ServerFnError> {
         .await;
 
     let row = sqlx::query(
-        "SELECT last_online_ping FROM streamers WHERE user_id = $1"
+        "SELECT last_overlay_ping FROM streamers WHERE user_id = $1"
     )
     .bind(&user.id)
     .fetch_optional(&pool)
@@ -155,7 +187,7 @@ pub async fn get_system_status() -> Result<SystemStatus, ServerFnError> {
 
     use sqlx::Row;
     let overlay_up = if let Some(r) = row {
-        if let Ok(ping) = r.try_get::<chrono::DateTime<chrono::Utc>, _>("last_online_ping") {
+        if let Ok(ping) = r.try_get::<chrono::DateTime<chrono::Utc>, _>("last_overlay_ping") {
             let now = chrono::Utc::now();
             now.signed_duration_since(ping).num_seconds() <= 300
         } else { false }
@@ -168,8 +200,9 @@ pub async fn get_system_status() -> Result<SystemStatus, ServerFnError> {
 
 #[component]
 pub fn SystemStatusPoller() -> impl IntoView {
+    #[allow(unused_variables)]
     let user_resource = use_context::<Resource<Result<Option<User>, ServerFnError>>>()
-        .expect("user_resource context missing");
+        .expect("User resource missing");
     let tick = RwSignal::new(0);
 
     #[cfg(feature = "hydrate")]
@@ -193,7 +226,7 @@ pub fn SystemStatusPoller() -> impl IntoView {
 
     let status_resource = Resource::new(
         move || tick.get(),
-        |_| async move { crate::utils::with_min_delay(get_system_status()).await.unwrap_or(SystemStatus { s3_up: false, overlay_up: false }) }
+        |_| async move { get_system_status().await.unwrap_or(SystemStatus { s3_up: false, overlay_up: false }) }
     );
     
     provide_context(status_resource);
@@ -647,7 +680,7 @@ pub async fn prefetch_upcoming_transactions(token: String, session_id: String) -
     let primary_media_url: Option<String> = streamer.try_get("file_url").unwrap_or(None);
     let fallback_media_file: String = streamer.try_get("fallback_media_file").unwrap_or_else(|_| "/default_donate.mp3".to_string());
 
-    let _ = sqlx::query("UPDATE streamers SET last_online_ping = CURRENT_TIMESTAMP WHERE id = $1")
+    let _ = sqlx::query("UPDATE streamers SET last_overlay_ping = CURRENT_TIMESTAMP WHERE id = $1")
         .bind(streamer_id)
         .execute(&pool)
         .await;

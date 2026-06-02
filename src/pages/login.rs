@@ -89,7 +89,7 @@ pub fn LoginPage() -> impl IntoView {
                 <div class="mt-lg text-center">
                     <p class="text-on-surface-variant text-body-md">
                         "Don't have an account? "
-                        <a href="/register" class="text-primary hover:underline font-bold">
+                        <a href=move || format!("/{}/register", expect_context::<leptos_fluent::I18n>().language.get().id.to_string()) class="text-primary hover:underline font-bold">
                             "Sign Up"
                         </a>
                     </p>

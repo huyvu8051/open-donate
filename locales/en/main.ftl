@@ -197,3 +197,7 @@ cta-view-leaders = View Leaders
 
 dashboard-must-login = You must be logged in to access the dashboard.
 dashboard-login-btn = Log In / Register
+
+header-explore = Explore
+header-creators = Creators
+header-leaderboard = Leaderboard

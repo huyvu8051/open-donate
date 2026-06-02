@@ -127,6 +127,7 @@ async fn main() {
 
     // run our app with hyper
     log!("listening on http://{}", &addr);
+    open_donate::s3::init_s3_poller().await;
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app.into_make_service())
         .await

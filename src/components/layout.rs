@@ -7,12 +7,25 @@ pub fn Header() -> impl IntoView {
         .expect("User resource must be provided");
 
     let location = use_location();
-    let nav_class = move |href: &'static str| {
-        let path = location.pathname.get();
-        let active = if href == "/" {
-            path == "/"
+    let i18n = expect_context::<leptos_fluent::I18n>();
+    let current_lang = move || i18n.language.get().id.to_string();
+
+    let make_href = move |base_path: &'static str| {
+        if base_path == "/" {
+            format!("/{}", current_lang())
         } else {
-            path.starts_with(href)
+            format!("/{}/{}", current_lang(), base_path.trim_start_matches('/'))
+        }
+    };
+
+    let nav_class = move |base_path: &'static str| {
+        let path = location.pathname.get();
+        let target = make_href(base_path);
+        
+        let active = if base_path == "/" {
+            path == target || path == format!("{}/", target)
+        } else {
+            path.starts_with(&target)
         };
 
         if active {
@@ -35,20 +48,20 @@ pub fn Header() -> impl IntoView {
             <div class="h-20 flex justify-between items-center w-full">
                 <div class="flex items-center gap-md">
                     <a
-                        href="/"
+                        href=move || make_href("/")
                         class="text-headline-md font-headline-md font-extrabold text-primary tracking-tighter"
                     >
                         "Glint"
                     </a>
                     <nav class="hidden md:flex items-center gap-md ml-lg">
-                        <a class=move || nav_class("/") href="/">
-                            "Explore"
+                        <a class=move || nav_class("/") href=move || make_href("/")>
+                            {leptos_fluent::move_tr!("header-explore")}
                         </a>
-                        <a class=move || nav_class("/explore") href="/explore">
-                            "Creators"
+                        <a class=move || nav_class("/explore") href=move || make_href("/explore")>
+                            {leptos_fluent::move_tr!("header-creators")}
                         </a>
-                        <a class=move || nav_class("/leaderboard") href="/leaderboard">
-                            "Leaderboard"
+                        <a class=move || nav_class("/leaderboard") href=move || make_href("/leaderboard")>
+                            {leptos_fluent::move_tr!("header-leaderboard")}
                         </a>
                     </nav>
                 </div>
@@ -62,7 +75,7 @@ pub fn Header() -> impl IntoView {
                                     view! {
                                         <div class="flex items-center gap-sm">
                                             <a
-                                                href="/dashboard"
+                                                href=move || make_href("/dashboard")
                                                 class="hidden sm:inline text-on-surface text-label-md font-semibold hover:text-primary transition-colors"
                                             >
                                                 "Hello, "
@@ -129,14 +142,14 @@ pub fn Header() -> impl IntoView {
                 if is_open.get() {
                     view! {
                         <nav class="md:hidden flex flex-col gap-sm pb-md border-t border-white/10 pt-md">
-                            <a class=move || nav_class("/") href="/">
-                                "Explore"
+                            <a class=move || nav_class("/") href=move || make_href("/")>
+                                {leptos_fluent::move_tr!("header-explore")}
                             </a>
-                            <a class=move || nav_class("/explore") href="/explore">
-                                "Creators"
+                            <a class=move || nav_class("/explore") href=move || make_href("/explore")>
+                                {leptos_fluent::move_tr!("header-creators")}
                             </a>
-                            <a class=move || nav_class("/leaderboard") href="/leaderboard">
-                                "Leaderboard"
+                            <a class=move || nav_class("/leaderboard") href=move || make_href("/leaderboard")>
+                                {leptos_fluent::move_tr!("header-leaderboard")}
                             </a>
                             <Suspense fallback=move || {
                                 view! {}
@@ -144,8 +157,8 @@ pub fn Header() -> impl IntoView {
                                 {move || match user_resource.get() {
                                     Some(Ok(Some(_))) => {
                                         view! {
-                                            <a class=move || nav_class("/dashboard") href="/dashboard">
-                                                "Dashboard"
+                                            <a class=move || nav_class("/dashboard") href=move || make_href("/dashboard")>
+                                                {leptos_fluent::move_tr!("header-dashboard")}
                                             </a>
                                         }
                                             .into_any()
@@ -182,8 +195,15 @@ pub fn LanguageSwitcher() -> impl IntoView {
                     )
                 }
                 on:click=move |_| {
-                    if let Some(lang) = i18n.languages.iter().find(|l| l.id.to_string() == "en") {
-                        i18n.language.set(lang);
+                    if let Some(_lang) = i18n.languages.iter().find(|l| l.id.to_string() == "en") {
+                        let path = leptos_router::hooks::use_location().pathname.get();
+                        let current_lang_prefix = format!("/{}", i18n.language.get().id.to_string());
+                        let new_path = if path.starts_with(&current_lang_prefix) {
+                            path.replacen(&current_lang_prefix, "/en", 1)
+                        } else {
+                            format!("/en{}", path)
+                        };
+                        let _ = leptos::prelude::window().location().set_href(&new_path);
                     }
                 }
             >
@@ -201,8 +221,15 @@ pub fn LanguageSwitcher() -> impl IntoView {
                     )
                 }
                 on:click=move |_| {
-                    if let Some(lang) = i18n.languages.iter().find(|l| l.id.to_string() == "vi") {
-                        i18n.language.set(lang);
+                    if let Some(_lang) = i18n.languages.iter().find(|l| l.id.to_string() == "vi") {
+                        let path = leptos_router::hooks::use_location().pathname.get();
+                        let current_lang_prefix = format!("/{}", i18n.language.get().id.to_string());
+                        let new_path = if path.starts_with(&current_lang_prefix) {
+                            path.replacen(&current_lang_prefix, "/vi", 1)
+                        } else {
+                            format!("/vi{}", path)
+                        };
+                        let _ = leptos::prelude::window().location().set_href(&new_path);
                     }
                 }
             >
@@ -214,12 +241,23 @@ pub fn LanguageSwitcher() -> impl IntoView {
 
 #[component]
 pub fn Footer() -> impl IntoView {
+    let i18n = expect_context::<leptos_fluent::I18n>();
+    let current_lang = move || i18n.language.get().id.to_string();
+
+    let make_href = move |base_path: &'static str| {
+        if base_path == "/" {
+            format!("/{}", current_lang())
+        } else {
+            format!("/{}/{}", current_lang(), base_path.trim_start_matches('/'))
+        }
+    };
+
     view! {
         <footer class="bg-surface-dim border-t border-surface-container-highest w-full py-lg mt-auto">
             <div class="max-w-7xl mx-auto px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-md">
                 <div class="flex flex-col items-center md:items-start gap-xs">
                     <a
-                        href="/"
+                        href=move || make_href("/")
                         class="text-headline-md font-headline-md font-bold text-primary hover:text-primary/80 transition-colors"
                     >
                         "Glint"
@@ -231,25 +269,25 @@ pub fn Footer() -> impl IntoView {
                 <nav class="flex flex-wrap justify-center gap-md">
                     <a
                         class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors"
-                        href="/about"
+                        href=move || make_href("/about")
                     >
                         {leptos_fluent::move_tr!("footer-about")}
                     </a>
                     <a
                         class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors"
-                        href="/faq"
+                        href=move || make_href("/faq")
                     >
                         {leptos_fluent::move_tr!("footer-faq")}
                     </a>
                     <a
                         class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors"
-                        href="/privacy"
+                        href=move || make_href("/privacy")
                     >
                         {leptos_fluent::move_tr!("footer-privacy")}
                     </a>
                     <a
                         class="text-on-surface-variant text-label-sm font-label-sm hover:text-secondary transition-colors"
-                        href="/terms"
+                        href=move || make_href("/terms")
                     >
                         {leptos_fluent::move_tr!("footer-terms")}
                     </a>

@@ -7,16 +7,23 @@ use leptos::form::ActionForm;
 
 #[component]
 pub fn DashboardLayout() -> impl IntoView {
-    let onboard_resource = LocalResource::new(move || {
-        async move {
-            crate::utils::with_min_delay(get_or_create_streamer()).await
-        }
+    let onboard_resource = Resource::new(|| (), |_| async move {
+        get_or_create_streamer().await
     });
 
     let location = leptos_router::hooks::use_location();
-    let path = move || location.pathname.get();
+    let i18n = expect_context::<leptos_fluent::I18n>();
+    let current_lang = move || i18n.language.get().id.to_string();
+
+    let make_href = move |p: &'static str| {
+        format!("/{}/{}", current_lang(), p.trim_start_matches('/'))
+    };
     
-    let is_active = move |p: &str| path() == p || (p == "/dashboard" && path() == "/dashboard/");
+    let is_active = move |p: &'static str| {
+        let target = make_href(p);
+        let current_path = location.pathname.get();
+        current_path == target || current_path == format!("{}/", target)
+    };
     
     let nav_class = move |p: &'static str| {
         move || {
@@ -67,7 +74,7 @@ pub fn DashboardLayout() -> impl IntoView {
                                                 </p>
                                             </div>
                                             <nav class="flex-1 flex flex-col gap-xs">
-                                                <a class=nav_class("/dashboard") href="/dashboard">
+                                                <a class=nav_class("/dashboard") href=move || make_href("/dashboard")>
                                                     <span class="material-symbols-outlined">"dashboard"</span>
                                                     <span class="text-label-md font-label-md">
                                                         {leptos_fluent::move_tr!("nav-dashboard")}
@@ -75,7 +82,7 @@ pub fn DashboardLayout() -> impl IntoView {
                                                 </a>
                                                 <a
                                                     class=nav_class("/dashboard/analytics")
-                                                    href="/dashboard/analytics"
+                                                    href=move || make_href("/dashboard/analytics")
                                                 >
                                                     <span class="material-symbols-outlined">"monitoring"</span>
                                                     <span class="text-label-md font-label-md">
@@ -84,7 +91,7 @@ pub fn DashboardLayout() -> impl IntoView {
                                                 </a>
                                                 <a
                                                     class=nav_class("/dashboard/payments")
-                                                    href="/dashboard/payments"
+                                                    href=move || make_href("/dashboard/payments")
                                                 >
                                                     <span class="material-symbols-outlined">"payments"</span>
                                                     <span class="text-label-md font-label-md">
@@ -93,7 +100,7 @@ pub fn DashboardLayout() -> impl IntoView {
                                                 </a>
                                                 <a
                                                     class=nav_class("/dashboard/settings")
-                                                    href="/dashboard/settings"
+                                                    href=move || make_href("/dashboard/settings")
                                                 >
                                                     <span class="material-symbols-outlined">"settings"</span>
                                                     <span class="text-label-md font-label-md">
@@ -140,7 +147,7 @@ pub fn DashboardLayout() -> impl IntoView {
 
                                         // Mobile Bottom Navigation
                                         <nav class="fixed bottom-0 w-full bg-surface-container-low/90 backdrop-blur-xl border-t border-white/10 flex justify-around items-center h-16 z-50 md:hidden pb-safe">
-                                            <a href="/dashboard" class=mob_nav_class("/dashboard")>
+                                            <a href=move || make_href("/dashboard") class=mob_nav_class("/dashboard")>
                                                 <span class="material-symbols-outlined text-[24px]">
                                                     "dashboard"
                                                 </span>
@@ -149,7 +156,7 @@ pub fn DashboardLayout() -> impl IntoView {
                                                 </span>
                                             </a>
                                             <a
-                                                href="/dashboard/analytics"
+                                                href=move || make_href("/dashboard/analytics")
                                                 class=mob_nav_class("/dashboard/analytics")
                                             >
                                                 <span class="material-symbols-outlined text-[24px]">
@@ -165,7 +172,7 @@ pub fn DashboardLayout() -> impl IntoView {
                                                 </span>
                                             </button>
                                             <a
-                                                href="/dashboard/payments"
+                                                href=move || make_href("/dashboard/payments")
                                                 class=mob_nav_class("/dashboard/payments")
                                             >
                                                 <span class="material-symbols-outlined text-[24px]">
@@ -176,7 +183,7 @@ pub fn DashboardLayout() -> impl IntoView {
                                                 </span>
                                             </a>
                                             <a
-                                                href="/dashboard/settings"
+                                                href=move || make_href("/dashboard/settings")
                                                 class=mob_nav_class("/dashboard/settings")
                                             >
                                                 <span class="material-symbols-outlined text-[24px]">
@@ -216,7 +223,7 @@ pub fn DashboardLayout() -> impl IntoView {
                                             {leptos_fluent::move_tr!("dashboard-must-login")}
                                         </p>
                                         <a
-                                            href="/login"
+                                            href=move || make_href("/login")
                                             class="bg-primary text-on-primary px-xl py-md rounded-xl font-bold hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20"
                                         >
                                             {leptos_fluent::move_tr!("dashboard-login-btn")}
@@ -242,8 +249,12 @@ pub fn DashboardLayout() -> impl IntoView {
 
 #[component]
 pub fn DashboardHome() -> impl IntoView {
-    let streamer = use_context::<crate::db::DbStreamer>().expect("Streamer context missing");
-    
+    let streamer = use_context::<crate::db::DbStreamer>()
+        .expect("Streamer must be available in DashboardHome");
+
+    let i18n = expect_context::<leptos_fluent::I18n>();
+    let current_lang = move || i18n.language.get().id.to_string();
+
     // Copy overlay link logic
     #[allow(unused_variables)]
     let token = streamer.overlay_token.clone();
@@ -420,7 +431,7 @@ pub fn DashboardHome() -> impl IntoView {
                     </button>
 
                     <a
-                        href=format!("/streamer/{}", streamer.username)
+                        href=move || format!("/{}/streamer/{}", current_lang(), streamer.username)
                         target="_blank"
                         class="inline-flex items-center gap-xs px-md py-sm rounded-xl bg-secondary text-on-secondary-container font-bold hover:brightness-110 transition-all active:scale-[0.98]"
                     >
@@ -879,17 +890,15 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
                     </span>
                     <button
                         class="w-10 h-10 flex items-center justify-center rounded-lg bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/50 disabled:opacity-30"
-                        disabled=move || page.get()
-                    >
-                        = _total_pages.get()
-                        on:click=move |_|
-                        {set_page
-                            .update(|p| {
-                                if *p < _total_pages.get() {
+                        disabled=move || page.get() >= _total_pages.get()
+                        on:click=move |_| {
+                            set_page.update(|p| {
+                                if *p < _total_pages.get_untracked() {
                                     *p += 1;
                                 }
-                            })}
-                        >
+                            })
+                        }
+                    >
                         <span class="material-symbols-outlined">"chevron_right"</span>
                     </button>
                 </div>
