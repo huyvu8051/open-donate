@@ -5,7 +5,7 @@ use crate::db::{DbStreamer, PaymentMethod};
 
 #[component]
 pub fn ExplorePage() -> impl IntoView {
-    let streamers_resource = Resource::new(|| (), |_| get_all_streamers());
+    let streamers_resource = Resource::new_blocking(|| (), |_| get_all_streamers());
 
     view! {
         <Header />
@@ -22,8 +22,27 @@ pub fn ExplorePage() -> impl IntoView {
 
                 <Suspense fallback=move || {
                     view! {
-                        <div class="text-center text-on-surface-variant mt-xl">
-                            "Loading streamers..."
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-lg mt-xl">
+                            {(0..6).map(|_| {
+                                view! {
+                                    <div class="flex flex-col gap-md bg-surface-container-low/40 backdrop-blur-md border border-white/10 rounded-2xl p-lg animate-pulse">
+                                        <div class="flex items-center gap-md">
+                                            <div class="w-20 h-20 rounded-full bg-white/10 shrink-0 border border-white/5"></div>
+                                            <div class="flex flex-col gap-sm w-full">
+                                                <div class="h-6 bg-white/10 rounded-md w-3/4"></div>
+                                                <div class="h-4 bg-white/10 rounded-md w-1/2"></div>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-col gap-2 mt-xs">
+                                            <div class="h-4 bg-white/10 rounded-md w-full"></div>
+                                            <div class="h-4 bg-white/10 rounded-md w-5/6"></div>
+                                        </div>
+                                        <div class="mt-auto pt-sm flex justify-end">
+                                            <div class="h-4 bg-white/10 rounded-md w-24"></div>
+                                        </div>
+                                    </div>
+                                }
+                            }).collect_view()}
                         </div>
                     }
                 }>

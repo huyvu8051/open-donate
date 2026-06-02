@@ -14,7 +14,7 @@ pub struct LeaderboardEntry {
 
 #[component]
 pub fn LeaderboardPage() -> impl IntoView {
-    let leaderboard_resource = Resource::new(|| (), |_| get_streamer_leaderboard());
+    let leaderboard_resource = Resource::new_blocking(|| (), |_| get_streamer_leaderboard());
 
     view! {
         <Header />
@@ -34,8 +34,37 @@ pub fn LeaderboardPage() -> impl IntoView {
 
                 <Suspense fallback=move || {
                     view! {
-                        <div class="text-center text-on-surface-variant mt-xl">
-                            "Loading leaderboard..."
+                        <div class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden animate-pulse mt-xl">
+                            <div class="grid grid-cols-12 gap-2 px-5 py-4 text-on-surface-variant text-label-sm font-label-sm border-b border-white/10">
+                                <div class="col-span-1">"#"</div>
+                                <div class="col-span-6">"Creator"</div>
+                                <div class="col-span-2 text-right">"Donations"</div>
+                                <div class="col-span-3 text-right">"Total"</div>
+                            </div>
+                            <div class="divide-y divide-white/10">
+                                {(0..10).map(|_| {
+                                    view! {
+                                        <div class="grid grid-cols-12 gap-2 px-5 py-4 items-center">
+                                            <div class="col-span-1">
+                                                <div class="w-4 h-4 bg-white/10 rounded"></div>
+                                            </div>
+                                            <div class="col-span-6 flex items-center gap-3">
+                                                <div class="w-10 h-10 rounded-full bg-white/10 shrink-0"></div>
+                                                <div class="flex flex-col gap-2 w-full">
+                                                    <div class="h-4 bg-white/10 rounded-md w-1/3"></div>
+                                                    <div class="h-3 bg-white/10 rounded-md w-1/4"></div>
+                                                </div>
+                                            </div>
+                                            <div class="col-span-2 flex justify-end">
+                                                <div class="h-4 bg-white/10 rounded-md w-8"></div>
+                                            </div>
+                                            <div class="col-span-3 flex justify-end">
+                                                <div class="h-4 bg-white/10 rounded-md w-16"></div>
+                                            </div>
+                                        </div>
+                                    }
+                                }).collect_view()}
+                            </div>
                         </div>
                     }
                 }>
