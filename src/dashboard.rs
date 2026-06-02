@@ -1,6 +1,7 @@
 use crate::db::{TransactionStatus, PaymentMethod};
 use leptos::prelude::*;
-use crate::app::{get_or_create_streamer, get_dashboard_transactions, Header, Footer, UpdateStreamerProfile};
+use crate::app::{get_or_create_streamer, get_dashboard_transactions, UpdateStreamerProfile};
+use crate::components::layout::{Header, Footer};
 use leptos_router::components::{Outlet};
 use leptos::form::ActionForm;
 
@@ -889,16 +890,17 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
                     </span>
                     <button
                         class="w-10 h-10 flex items-center justify-center rounded-lg bg-surface-variant/30 text-on-surface-variant hover:bg-surface-variant/50 disabled:opacity-30"
-                        disabled=move || page.get() >= _total_pages.get()
-                        on:click=move |_| {
-                            set_page
-                                .update(|p| {
-                                    if *p < _total_pages.get() {
-                                        *p += 1;
-                                    }
-                                })
-                        }
+                        disabled=move || page.get()
                     >
+                        = _total_pages.get()
+                        on:click=move |_|
+                        {set_page
+                            .update(|p| {
+                                if *p < _total_pages.get() {
+                                    *p += 1;
+                                }
+                            })}
+                        >
                         <span class="material-symbols-outlined">"chevron_right"</span>
                     </button>
                 </div>

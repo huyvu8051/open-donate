@@ -1,3 +1,4 @@
+use crate::components::layout::Header;
 use leptos::prelude::*;
 use crate::auth::LoginWithEmail;
 
@@ -16,7 +17,7 @@ pub fn LoginPage() -> impl IntoView {
     });
 
     view! {
-        <crate::app::Header />
+        <Header />
         <div class="min-h-screen pt-[120px] flex flex-col items-center justify-center px-margin-mobile">
             <div class="w-full max-w-[480px] bg-surface-container/50 backdrop-blur-xl p-md md:p-lg rounded-3xl border border-white/10 shadow-2xl">
                 <h1 class="text-headline-xl font-headline-xl text-center text-on-surface mb-lg">

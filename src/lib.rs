@@ -3,6 +3,7 @@
 
 pub mod app;
 pub mod auth;
+pub mod components;
 pub mod db;
 pub mod dashboard;
 pub mod overlay;

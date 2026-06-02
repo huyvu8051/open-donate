@@ -248,8 +248,7 @@ pub fn OverlayPage() -> impl IntoView {
                         .into_any();
                 }
                 if interaction_required.get() {
-                    return 
-                    view! {
+                    return view! {
                         <div
                             class="pointer-events-auto absolute inset-0 bg-black/80 z-50 flex items-center justify-center backdrop-blur-sm cursor-pointer"
                             on:click=unlock_audio

@@ -1,5 +1,9 @@
 //! Static content pages: About, FAQ, Privacy Policy, Terms of Service.
 
+pub mod landing;
+pub mod explore;
+pub mod leaderboard;
+pub mod streamer;
 pub mod login;
 pub mod register;
 
@@ -7,7 +11,7 @@ pub use login::*;
 pub use register::*;
 
 use leptos::prelude::*;
-use crate::app::{Header, Footer};
+use crate::components::layout::{Header, Footer};
 
 // ─── About Page ──────────────────────────────────────────────────────────────
 
