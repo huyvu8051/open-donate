@@ -5,7 +5,9 @@ use crate::db::{DbStreamer, PaymentMethod};
 
 #[component]
 pub fn ExplorePage() -> impl IntoView {
-    let streamers_resource = Resource::new_blocking(|| (), |_| get_all_streamers());
+    let streamers_resource = Resource::new_blocking(|| (), |_| async move {
+        crate::utils::with_min_delay(get_all_streamers()).await
+    });
 
     view! {
         <Header />

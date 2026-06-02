@@ -59,12 +59,7 @@ pub fn StreamerPage() -> impl IntoView {
     // Load profile info from database using URL param (SSR-friendly)
     let streamer_resource = Resource::new(
         move || username(),
-        |uname| async move {
-            if uname.is_empty() {
-                return Ok(None);
-            }
-            get_streamer(uname).await
-        },
+        |uname| async move { crate::utils::with_min_delay(get_streamer(uname)).await },
     );
 
     // Load recent transactions (SSR-friendly)
@@ -74,7 +69,7 @@ pub fn StreamerPage() -> impl IntoView {
             if uname.is_empty() {
                 return Ok(vec![]);
             }
-            get_recent_transactions(uname).await
+            crate::utils::with_min_delay(get_recent_transactions(uname)).await
         },
     );
 

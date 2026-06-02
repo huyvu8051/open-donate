@@ -49,6 +49,7 @@ cfg-if = "1.0.4"
 server_fn = { version = "0.8.12", features = ["multipart"] }
 futures = { version = "0.3.32", optional = true }
 js-sys = { version = "0.3.99", optional = true }
+send_wrapper = "0.6.0"
 
 [features]
 hydrate = [

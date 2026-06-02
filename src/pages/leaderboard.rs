@@ -14,7 +14,9 @@ pub struct LeaderboardEntry {
 
 #[component]
 pub fn LeaderboardPage() -> impl IntoView {
-    let leaderboard_resource = Resource::new_blocking(|| (), |_| get_streamer_leaderboard());
+    let leaderboard_resource = Resource::new_blocking(|| (), |_| async move {
+        crate::utils::with_min_delay(get_streamer_leaderboard()).await
+    });
 
     view! {
         <Header />

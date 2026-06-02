@@ -9,7 +9,7 @@ use leptos::form::ActionForm;
 pub fn DashboardLayout() -> impl IntoView {
     let onboard_resource = LocalResource::new(move || {
         async move {
-            get_or_create_streamer().await
+            crate::utils::with_min_delay(get_or_create_streamer()).await
         }
     });
 
@@ -278,7 +278,7 @@ pub fn DashboardHome() -> impl IntoView {
     }
     
     let status_resource = Resource::new(move || tick.get(), |_| async move {
-        crate::app::get_overlay_status().await.unwrap_or(false)
+        crate::utils::with_min_delay(crate::app::get_overlay_status()).await.unwrap_or(false)
     });
 
     let test_action = ServerAction::<crate::app::TestOverlayDonation>::new();
@@ -761,7 +761,7 @@ pub fn DonationHistory(streamer_id: i32) -> impl IntoView {
         let ps = page_size.get();
         let trig = reload_trigger.get();
         async move {
-            get_dashboard_transactions(streamer_id, p, ps, trig).await
+            crate::utils::with_min_delay(get_dashboard_transactions(streamer_id, p, ps, trig)).await
         }
     });
 
@@ -1069,7 +1069,7 @@ pub use crate::analytics::AnalyticsPage;
 pub fn S3StatusBanner() -> impl IntoView {
     let s3_status_resource = Resource::new(
         || (),
-        |_| async move { crate::app::check_s3_status().await.unwrap_or(false) }
+        |_| async move { crate::utils::with_min_delay(crate::app::check_s3_status()).await.unwrap_or(false) }
     );
     
     view! {
@@ -1105,11 +1105,11 @@ pub fn MediaSettingsSection() -> impl IntoView {
     let streamer = use_context::<crate::db::DbStreamer>().expect("Streamer context missing");
     
     let default_medias = Resource::new(|| (), |_| async move {
-        crate::app::get_default_medias().await.unwrap_or_default()
+        crate::utils::with_min_delay(crate::app::get_default_medias()).await.unwrap_or_default()
     });
     
     let streamer_medias = Resource::new(|| (), |_| async move {
-        crate::app::get_streamer_media().await.unwrap_or_default()
+        crate::utils::with_min_delay(crate::app::get_streamer_media()).await.unwrap_or_default()
     });
     
     let save_media_action = ServerAction::<crate::app::SaveMediaSettings>::new();

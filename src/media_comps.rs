@@ -1,9 +1,8 @@
-
 #[component]
 pub fn S3StatusBanner() -> impl IntoView {
     let s3_status_resource = Resource::new(
         || (),
-        |_| async move { crate::app::check_s3_status().await.unwrap_or(false) }
+        |_| async move { crate::utils::with_min_delay(crate::app::check_s3_status()).await.unwrap_or(false) }
     );
     
     view! {
@@ -39,11 +38,11 @@ pub fn MediaSettingsSection() -> impl IntoView {
     let streamer = use_context::<crate::db::DbStreamer>().expect("Streamer context missing");
     
     let default_medias = Resource::new(|| (), |_| async move {
-        crate::app::get_default_medias().await.unwrap_or_default()
+        crate::utils::with_min_delay(crate::app::get_default_medias()).await.unwrap_or_default()
     });
     
     let streamer_medias = Resource::new(|| (), |_| async move {
-        crate::app::get_streamer_media().await.unwrap_or_default()
+        crate::utils::with_min_delay(crate::app::get_streamer_media()).await.unwrap_or_default()
     });
     
     let save_media_action = ServerAction::<crate::app::SaveMediaSettings>::new();

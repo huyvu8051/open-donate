@@ -75,7 +75,7 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     // Load current user
-    let user_resource = Resource::new(|| (), |_| get_me());
+    let user_resource = Resource::new(|| (), |_| async move { crate::utils::with_min_delay(get_me()).await });
     provide_context(user_resource);
 
     view! {

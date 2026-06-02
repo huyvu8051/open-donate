@@ -182,7 +182,9 @@ pub fn AnalyticsPage() -> impl IntoView {
     let analytics_resource = LocalResource::new(move || {
         let streamer_id = streamer.id;
         let range = time_range.get();
-        async move { get_streamer_analytics(streamer_id, range).await }
+        async move {
+            crate::utils::with_min_delay(get_streamer_analytics(streamer_id, range)).await
+        }
     });
 
     view! {
