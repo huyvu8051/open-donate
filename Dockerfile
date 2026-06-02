@@ -8,9 +8,20 @@
 ##     -e LEPTOS_SITE_ADDR=0.0.0.0:3000 \
 ##     open-donate:local
 
-FROM rust:1-bookworm AS builder
+# --- Chef base stage ---
+FROM rust:1-bookworm AS chef
 
+# Install cargo-chef
+RUN cargo install cargo-chef
 WORKDIR /app
+
+# --- Planner stage ---
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# --- Builder stage ---
+FROM chef AS builder
 
 # System deps commonly needed by sqlx/postgres + wasm tooling + asset pipeline.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -33,7 +44,15 @@ RUN rustup toolchain install nightly --profile minimal --allow-downgrade \
 RUN cargo install cargo-leptos --locked \
   && npm install -g sass
 
-# Cache deps first
+# Copy recipe from planner
+COPY --from=planner /app/recipe.json recipe.json
+
+# Build dependencies - this is the caching Docker layer!
+# cargo-leptos builds two targets: WASM (frontend) and host (backend).
+RUN cargo chef cook --release --recipe-path recipe.json --bin open-donate --features "ssr"
+RUN cargo chef cook --release --recipe-path recipe.json --target wasm32-unknown-unknown --lib --features "hydrate"
+
+# Now copy the actual source code
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 COPY public ./public
@@ -45,6 +64,7 @@ COPY migrations ./migrations
 # If the repo has other build-time assets/config, copy them too.
 COPY ./*.yaml ./
 
+# Build the app (dependencies are already cached)
 RUN cargo leptos build --release
 
 FROM debian:bookworm-slim AS runtime
