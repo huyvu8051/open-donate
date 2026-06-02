@@ -3,15 +3,15 @@ import { faker } from '@faker-js/faker';
 import { DashboardPage } from '../pages/DashboardPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { StreamerSettingsPage } from '../pages/StreamerSettingsPage';
+import { StreamerPaymentsPage } from '../pages/StreamerPaymentsPage';
 
 test('Streamer Settings Update Flow (Profile, Media, Payments)', async ({ page }) => {
   const dashboardPage = new DashboardPage(page);
   const registerPage = new RegisterPage(page);
   const settingsPage = new StreamerSettingsPage(page);
+  const paymentsPage = new StreamerPaymentsPage(page);
 
-  const fakeEmail = faker.internet.email();
-  console.log(`Registering new user: ${fakeEmail}`);
-  await registerPage.register(fakeEmail);
+  const fakeEmail = await registerPage.registerNewUser();
   await dashboardPage.waitForDashboard();
 
   // ==========================================
@@ -29,7 +29,7 @@ test('Streamer Settings Update Flow (Profile, Media, Payments)', async ({ page }
 
   // Verify success message appeared
   await settingsPage.verifySuccessMessage();
-  
+
   // Verify the inputs retained their new values
   await settingsPage.verifySettingsValues(newDisplayName, newBio, newUsername);
 
@@ -37,54 +37,27 @@ test('Streamer Settings Update Flow (Profile, Media, Payments)', async ({ page }
   // 2. Update Media settings (Fallback Selection)
   // ==========================================
   console.log('Updating Media Settings...');
-  const fallbackMediaSelect = page.locator('select[name="fallback_media_file"]');
-  await expect(fallbackMediaSelect).toBeVisible({ timeout: 10000 });
-  
   // Wait for the options to load asynchronously and be attached to the DOM
   await page.waitForSelector('select[name="fallback_media_file"] option', { state: 'attached', timeout: 10000 });
-  const values = await fallbackMediaSelect.locator('option').evaluateAll(elrs => elrs.map(o => (o as HTMLOptionElement).value));
+  const values = await settingsPage.fallbackMediaSelect.locator('option').evaluateAll(elrs => elrs.map(o => (o as HTMLOptionElement).value));
   const targetOption = values.find(v => v.includes('funny_1.mp3')) || '/audio/funny_1.mp3';
   console.log(`Selecting dynamic option: ${targetOption}`);
-  await fallbackMediaSelect.selectOption(targetOption);
-  
+  await settingsPage.selectFallbackMedia(targetOption);
+
   // Click the save button under Media settings
-  const saveMediaButton = page.locator('button:has-text("Save Media Settings")');
-  await saveMediaButton.click();
-  
-  // Verify success banner/message
-  await expect(page.locator('text="Settings saved successfully!"')).toBeVisible({ timeout: 5000 });
+  await settingsPage.saveMediaSettings();
 
   // ==========================================
   // 3. Update Payments Settings Page
   // ==========================================
   console.log('Navigating to payments page...');
-  await page.goto('/dashboard/payments');
-  await page.waitForURL(/.*dashboard\/payments.*/, { timeout: 30000 });
-  
-  // Verify header
-  await expect(page.getByTestId('streamer-payments-header')).toBeVisible();
-
-  // Find checkboxes
-  const mockAutoCheckbox = page.locator('input[type="checkbox"][value="Mock Auto"]');
-  const mockManualCheckbox = page.locator('input[type="checkbox"][value="Mock Manual"]');
-  
-  await expect(mockAutoCheckbox).toBeVisible();
-  await expect(mockManualCheckbox).toBeVisible();
+  await paymentsPage.goto();
 
   // Uncheck Auto, Check Manual
-  if (await mockAutoCheckbox.isChecked()) {
-    await mockAutoCheckbox.uncheck();
-  }
-  if (!(await mockManualCheckbox.isChecked())) {
-    await mockManualCheckbox.check();
-  }
+  await paymentsPage.setPaymentMethod('Mock Manual');
 
   // Save payments
-  const savePaymentsButton = page.getByTestId('save-payments-btn');
-  await savePaymentsButton.click();
-
-  // Verify success message
-  await expect(page.getByTestId('payments-success-message')).toBeVisible({ timeout: 5000 });
+  await paymentsPage.save();
   console.log('Payments settings updated successfully!');
 });
 
@@ -94,14 +67,12 @@ test('Streamer Settings File Uploads (Avatar & Media)', async ({ page }) => {
   const registerPage = new RegisterPage(page);
   const settingsPage = new StreamerSettingsPage(page);
 
-  const fakeEmail = faker.internet.email();
-  console.log(`Registering new user for upload tests: ${fakeEmail}`);
-  await registerPage.register(fakeEmail);
+  const fakeEmail = await registerPage.registerNewUser();
+  console.log(`Registered user for upload tests: ${fakeEmail}`);
   await dashboardPage.waitForDashboard();
 
   console.log('Navigating to dashboard settings...');
-  await page.goto('/dashboard/settings');
-  await page.waitForURL(/.*dashboard\/settings.*/, { timeout: 30000 });
+  await settingsPage.goto();
 
   // ==========================================
   // 1. Upload Avatar
@@ -112,9 +83,9 @@ test('Streamer Settings File Uploads (Avatar & Media)', async ({ page }) => {
     mimeType: 'image/png',
     buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')
   };
-  
+
   await settingsPage.uploadAvatar(avatarFile);
-  
+
   await expect(async () => {
     const isHidden = await settingsPage.saveAvatarButton.isHidden();
     let hasFailed = false;
@@ -135,9 +106,9 @@ test('Streamer Settings File Uploads (Avatar & Media)', async ({ page }) => {
     mimeType: 'audio/mpeg',
     buffer: Buffer.from('//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq', 'base64')
   };
-  
+
   await settingsPage.uploadMedia(mediaFile);
-  
+
   await expect(async () => {
     const isSuccess = await settingsPage.mediaUploadSuccess.isVisible();
     const hasFailed = await settingsPage.mediaUploadError.isVisible();

@@ -12,11 +12,15 @@ export class StreamerSettingsPage {
   readonly avatarFileInput: Locator;
   readonly saveAvatarButton: Locator;
   readonly avatarUploadStatus: Locator;
-  
+
   readonly mediaFileInput: Locator;
   readonly uploadMediaButton: Locator;
   readonly mediaUploadSuccess: Locator;
   readonly mediaUploadError: Locator;
+
+  readonly fallbackMediaSelect: Locator;
+  readonly saveMediaSettingsButton: Locator;
+  readonly settingsSavedMsg: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -34,6 +38,10 @@ export class StreamerSettingsPage {
     this.uploadMediaButton = page.getByTestId('upload-media-button');
     this.mediaUploadSuccess = page.getByTestId('media-upload-success');
     this.mediaUploadError = page.getByTestId('media-upload-error');
+
+    this.fallbackMediaSelect = page.locator('select[name="fallback_media_file"]');
+    this.saveMediaSettingsButton = page.locator('button:has-text("Save Media Settings")');
+    this.settingsSavedMsg = page.locator('text="Settings saved successfully!"');
   }
 
   async goto() {
@@ -72,5 +80,16 @@ export class StreamerSettingsPage {
   async uploadMedia(file: { name: string, mimeType: string, buffer: Buffer }) {
     await this.mediaFileInput.setInputFiles(file);
     await this.uploadMediaButton.click();
+  }
+
+  async selectFallbackMedia(targetOption: string) {
+    await expect(this.fallbackMediaSelect).toBeVisible({ timeout: 10000 });
+    await this.page.waitForSelector('select[name="fallback_media_file"] option', { state: 'attached', timeout: 10000 });
+    await this.fallbackMediaSelect.selectOption(targetOption);
+  }
+
+  async saveMediaSettings() {
+    await this.saveMediaSettingsButton.click();
+    await expect(this.settingsSavedMsg).toBeVisible({ timeout: 5000 });
   }
 }

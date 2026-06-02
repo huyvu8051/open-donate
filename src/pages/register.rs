@@ -29,7 +29,7 @@ pub fn RegisterPage() -> impl IntoView {
                             error_msg()
                                 .map(|err| {
                                     view! {
-                                        <div class="bg-error-container text-on-error-container p-sm rounded-lg text-body-md text-center">
+                                        <div data-testid="error-container" class="bg-error-container text-on-error-container p-sm rounded-lg text-body-md text-center">
                                             {err}
                                         </div>
                                     }

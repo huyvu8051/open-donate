@@ -9,6 +9,8 @@ export class DashboardPage {
     readonly copyOverlayLinkBtn: Locator;
     readonly togglePauseBtn: Locator;
     readonly toggleSoundBtn: Locator;
+    readonly logoutBtn: Locator;
+    readonly donationRow: Locator;
 
     constructor(page: Page) {
         this.page = page;
@@ -19,6 +21,8 @@ export class DashboardPage {
         this.copyOverlayLinkBtn = page.getByTestId('copy-overlay-link-btn');
         this.togglePauseBtn = page.getByTestId('toggle-pause-btn');
         this.toggleSoundBtn = page.getByTestId('toggle-sound-btn');
+        this.logoutBtn = page.getByRole('button', { name: /logout/i });
+        this.donationRow = page.getByTestId('donation-row');
     }
 
     async waitForDashboard() {
@@ -48,5 +52,9 @@ export class DashboardPage {
 
     async toggleSound() {
         await this.toggleSoundBtn.click();
+    }
+
+    async logout() {
+        await this.logoutBtn.click();
     }
 }

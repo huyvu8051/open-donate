@@ -599,7 +599,7 @@ pub fn LeaderboardPage() -> impl IntoView {
         <main class="pt-24 pb-xl px-margin-mobile md:px-margin-desktop min-h-screen">
             <div class="max-w-6xl mx-auto flex flex-col gap-xl">
                 <div class="flex flex-col gap-xs text-center">
-                    <h1 class="text-display-sm md:text-display-md font-display-md font-extrabold text-on-surface tracking-tight">
+                    <h1 data-testid="page-header" class="text-display-sm md:text-display-md font-display-md font-extrabold text-on-surface tracking-tight">
                         "Leaderboard"
                     </h1>
                     <p class="text-headline-sm font-headline-sm text-on-surface-variant max-w-2xl mx-auto">
@@ -621,7 +621,7 @@ pub fn LeaderboardPage() -> impl IntoView {
                                 Ok(entries) => {
                                     if entries.is_empty() {
                                         view! {
-                                            <div class="text-center text-on-surface-variant mt-xl">
+                                            <div data-testid="empty-state" class="text-center text-on-surface-variant mt-xl">
                                                 "No donations yet."
                                             </div>
                                         }
@@ -629,7 +629,7 @@ pub fn LeaderboardPage() -> impl IntoView {
                                     } else {
                                         view! {
                                             <div class="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden">
-                                                <div class="grid grid-cols-12 gap-2 px-5 py-4 text-on-surface-variant text-label-sm font-label-sm border-b border-white/10">
+                                                <div data-testid="leaderboard-header" class="grid grid-cols-12 gap-2 px-5 py-4 text-on-surface-variant text-label-sm font-label-sm border-b border-white/10">
                                                     <div class="col-span-1">"#"</div>
                                                     <div class="col-span-6">"Creator"</div>
                                                     <div class="col-span-2 text-right">"Donations"</div>

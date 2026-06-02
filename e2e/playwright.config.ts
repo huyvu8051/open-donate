@@ -28,15 +28,15 @@ export default defineConfig({
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   /* Limit to 1 worker to prevent overwhelming the free Render instance's DB connection pool. */
-  workers: 3,
+  workers: 4,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: "html",
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
     actionTimeout: 0,
-    // baseURL: process.env.BASE_URL || 'http://localhost:3000',
-    baseURL: process.env.BASE_URL || 'https://open-donate.onrender.com/',
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    // baseURL: process.env.BASE_URL || 'https://open-donate.onrender.com/',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
@@ -60,12 +60,12 @@ export default defineConfig({
     //   },
     // },
 
-    // {
-    //   name: "webkit",
-    //   use: {
-    //     ...devices["Desktop Safari"],
-    //   },
-    // },
+    {
+      name: "webkit",
+      use: {
+        ...devices["Desktop Safari"],
+      },
+    },
 
     /* Test against mobile viewports. */
     // {

@@ -9,10 +9,8 @@ test.describe('Streamer Analytics Page E2E', () => {
     const registerPage = new RegisterPage(page);
 
     // 1. Register a new user to access the dashboard
-    const fakeEmail = faker.internet.email();
-    console.log(`Registering user for analytics test: ${fakeEmail}`);
-
-    await registerPage.register(fakeEmail);
+    const fakeEmail = await registerPage.registerNewUser();
+    console.log(`Registered user for analytics test: ${fakeEmail}`);
     await dashboardPage.waitForDashboard();
 
     // 2. Navigate to the Analytics Page
@@ -52,10 +50,10 @@ test.describe('Streamer Analytics Page E2E', () => {
       const button = page.locator(`button:has-text("${label}")`);
       await expect(button).toBeVisible();
       await button.click();
-      
+
       // Allow brief moment for API request to fulfill and charts to re-render
       await page.waitForTimeout(500);
-      
+
       // Active button should have bg-primary class
       await expect(button).toHaveClass(/.*bg-primary.*/);
     }

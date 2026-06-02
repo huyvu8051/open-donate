@@ -35,11 +35,8 @@ test.describe('Overlay Flow E2E', () => {
     // 1. Streamer Registers & Opens Dashboard
     // ==========================================
     console.log('Streamer: Navigating to register...');
-    const testEmail = faker.internet.email();
-    console.log(`Streamer: Registering with email: ${testEmail}`);
-    
-    await registerPage.register(testEmail);
-
+    const testEmail = await registerPage.registerNewUser();
+    console.log(`Streamer: Registered with email: ${testEmail}`);
     console.log('Streamer: Waiting for redirect to dashboard...');
     await dashboardPage.waitForDashboard();
 
